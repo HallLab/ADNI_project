@@ -2,7 +2,7 @@ import pandas as pd
 import pingouin as pg
 import numpy as np
 from sklearn import preprocessing
-from scipy.stats import chi2
+import scipy.stats as stats
 
 class P180:
     '''
@@ -60,7 +60,8 @@ class P180:
         c = 0
         for i in file_names:
             dat = pd.read_csv(p180_path + i,
-                              na_values=na_values).set_index('RID')
+                              na_values=na_values).\
+                     set_index('RID')
             #Divide between pool and proper samples
             dat_pool = dat.loc[999999]
             dat_data = dat.loc[0:99999]
@@ -331,24 +332,29 @@ class P180:
         for i in range(len(self.data)):
             self.data[i] = np.log2(self.data[i])
 
-    def scale_metabolites(self):
+    def zscore_normalize_metabolites(self):
         '''
-        Scale metabolites values to mean center and unit variance,
-        by substracting whole column by mean, and dividing by the 
-        standard deviation
+        Apply z-score normalization to metabolites values to mean center 
+        and unit variance, by substracting whole column by mean, 
+        and dividing by the standard deviation
+        The datasets are merged to prevent bias (PERHAPS NOT!!!!!)
 
         Returns
         ----------
         data: pd.Dataframe
-            data with scaled values
+            data with normalized values
         '''
-        print('-----Scaling metabolites-----\n')
+        print('-----Z-score normalizing metabolites-----\n')
         for i in range(len(self.data)):
-            preprocessing.scale(self.data[i],
-                                axis=0,
-                                with_mean=True,
-                                with_std=True,
-                                copy=False)
+            self.data[i] = self.data[i].apply(stats.zscore,
+                                              nan_policy='omit')
+        #for i in range(2):
+        #    d = pd.concat([self.data[i], 
+        #                   self.data[i+2]])
+        #    d = d.apply(stats.zscore,
+        #                nan_policy='omit')
+        #    self.data[i]   = d.loc[self.data[i].index]
+        #    self.data[i+2] = d.loc[self.data[i+2].index]
     
     def replace_three_std(self):
         '''
@@ -504,7 +510,7 @@ class P180:
                 distance = (p1-p2).T.dot(cov_mat_pm1).dot(p1-p2)
                 distances.append(distance)
             distances = np.array(distances)
-            cutoff    = chi2.ppf(0.99, self.data[i].shape[1])
+            cutoff    = stats.chi2.ppf(0.99, self.data[i].shape[1])
             n_to_remove = (distances > cutoff ).sum()
             print('We will remove ' + 
                   str(n_to_remove) + 
@@ -595,3 +601,93 @@ class P180:
                     self.data[i][\
                     self.data_meta[i]['Plate.Bar.Code'] == \
                         plates_ID[j]] / correction
+
+    def save_files(self):
+        '''
+        Save cleaned and QCed files to a csv
+        '''
+        print('-----Saving p180 file to .csv-----')
+        respath = '~/work/ADNI_project/results/'
+        dat1 = pd.concat([self.data[0],
+                          self.data[1]],
+                          axis=1)
+        dat2 = pd.concat([self.data[2],
+                          self.data[3]],
+                          axis=1)
+        final_dat = pd.concat([dat1, dat2])
+        name = 'p180_cleaned.csv'
+        final_dat.to_csv(respath + name)
+
+class QT_pad:
+    '''
+    QT-PAD dataset class
+    '''
+    def __init__(self):
+        '''
+        Initiate the class
+
+        Attributes
+        ----------
+        data: pd.Dataframe
+            qt-pad data
+        phenotypes: list
+            phenotype names
+        covariates: list
+            covariate names
+        '''
+        self.phenotypes = ['Hippocampus',
+                           'Entorhinal']
+        self.covariates = ['AGE',
+                           'PTEDUCAT',
+                           'APOE4']
+        qt_path = '~/mah546/default/datasets/ADNI/Test_Data/Data_for_Challenges/ADNI_QT-PAD/ADNI_adnimerge_20170629_QT-freeze.csv'
+
+        dat = pd.read_csv(qt_path).\
+                 set_index(['RID','VISCODE'])
+
+        self.data = dat
+
+    def keep_baseline(self):
+        '''
+        Keep only baseline measurements in data
+
+        Returns
+        ----------
+        data: pd.Dataframe
+            data with only bl
+        '''
+        idx = pd.IndexSlice
+        self.data = self.data.loc[idx[:, 'bl'], :]
+
+    def keep_phenotypes(self):
+        '''
+        Keep only the needed phenotypes, the RID,
+        and covariates
+
+        Returns
+        data: pd.Dataframe
+            data with the phenotypes, the RID and covariates
+        '''
+        keep_columns = self.phenotypes +\
+                       self.covariates +\
+                       ['PTGENDER']
+        self.data = self.data.reset_index().set_index('RID')
+        self.data = self.data.loc[:,keep_columns]
+
+    def zscore_normalize_phenotypes(self):
+        '''
+        Apply z-score normalization to phenotype values to mean center 
+        and unit variance, by substracting whole column by mean, 
+        and dividing by the standard deviation
+
+        Returns
+        ----------
+        data: pd.Dataframe
+            data with normalized values
+        '''
+        print('-----Z-score normalizing phenotypes-----\n')
+        self.data[self.phenotypes] = self.data[self.phenotypes].\
+                                          apply(stats.zscore,
+                                                nan_policy='omit')
+                                           
+    
