@@ -4,7 +4,7 @@ import analyze
 import pandas as pd
 
 #### Read results
-p180 = pd.read_csv('~/work/ADNI_project/results/p180_cleaned.csv').\
+p180 = pd.read_csv('../results/p180_cleaned.csv').\
           set_index('RID')
 
 qtpad = clean.QT_pad()
@@ -20,5 +20,5 @@ adni_dat.sex_diff_test()
 adni_dat.categorize_sex_diff()
 adni_dat.categorize_arnold20()
 
-savepath = '~/work/ADNI_project/results'
+savepath = '../results'
 adni_dat.save_to_csv(savepath)

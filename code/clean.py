@@ -28,9 +28,7 @@ class P180:
             List of metadata from the pool samples
         '''
         #### SETTING PATHS AND FILES ####
-        p180_path = '~/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Biocrates_p180/'
-        lod_path  = p180_path + 'LODvalues/'
-        fasting_path = '~/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/BIOMARK.csv'
+        data_path = '../data/'
 
         file_names = ['ADMCDUKEP180UPLC_01_15_16.csv',
                       'ADMCDUKEP180FIA_01_15_16.csv',
@@ -59,7 +57,7 @@ class P180:
         self.pool_meta = []
         c = 0
         for i in file_names:
-            dat = pd.read_csv(p180_path + i,
+            dat = pd.read_csv(data_path + i,
                               na_values=na_values).\
                      set_index('RID')
             #Divide between pool and proper samples
@@ -84,7 +82,7 @@ class P180:
             c = c + 1
         
         #### FASTING DATA ####
-        fast_dat = pd.read_csv(fasting_path, 
+        fast_dat = pd.read_csv(data_path + 'BIOMARK.csv', 
                                index_col='RID',
                                na_values=-4)
         #Keep only information from baseline
@@ -108,7 +106,7 @@ class P180:
                         'LODvalues_' + \
                         str(self.cohort[i]) + \
                         '.csv'
-            dat = pd.read_csv(lod_path + filename)
+            dat = pd.read_csv(data_path + filename)
             # In lod value ADNI2GO FIA, the bar code plate
             # needs fixing
             if i == 3:
@@ -640,7 +638,7 @@ class QT_pad:
         self.covariates = ['AGE',
                            'PTEDUCAT',
                            'APOE4']
-        qt_path = '~/mah546/default/datasets/ADNI/Test_Data/Data_for_Challenges/ADNI_QT-PAD/ADNI_adnimerge_20170629_QT-freeze.csv'
+        qt_path = '../data/ADNI_adnimerge_20170629_QT-freeze.csv'
 
         dat = pd.read_csv(qt_path).\
                  set_index(['RID','VISCODE'])
