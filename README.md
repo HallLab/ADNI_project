@@ -28,6 +28,14 @@ Next, on the terminal, in the root of this repository, install the conda environ
 conda env create -f environment.yml
 ```
 
+If, for any reason, the installation through the environment file fails, you can install the environment manually, by running the following:
+
+```bash
+conda create --name adni_project python=3.9 pandas numpy scipy jupyterlab statsmodels scikit-learn pingouin r-base r-wgcna
+conda activate adni_project
+pip install git+https://github.com/HallLab/clarite-python.git
+```
+
 ## Replicate the analysis
 
 Depending on whether you are replicating the analysis on your local machine or sending the job to a cluster, you can run either `run_local.sh` or `run_cluster.sh`

@@ -106,17 +106,19 @@ class P180:
                         'LODvalues_' + \
                         str(self.cohort[i]) + \
                         '.csv'
-            dat = pd.read_csv(data_path + filename)
             # In lod value ADNI2GO FIA, the bar code plate
             # needs fixing
             if i == 3:
+                dat = pd.read_csv(data_path + filename,
+                                  encoding='latin_1')
                 barcode = dat['Plate Bar Code']
                 barcode = barcode.str.split(' ',
                                             expand = True)[2].\
                                   str.replace(pat='/',
                                               repl='-')
                 dat['Plate Bar Code'] = barcode
-
+            else:
+                dat = pd.read_csv(data_path + filename)
             # Metabolite names in lod don't match those in
             # the data, replace '-', ':', '(', ')' and ' ' with '.'
             old_columns = dat.columns
