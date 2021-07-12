@@ -3,6 +3,8 @@ import clean
 
 #### Read files
 p180 = clean.P180()
+qtpad = clean.QT_pad()
+qtpad.keep_baseline()
 
 #### Remove metabolites
 p180.remove_missing_metabolites()
@@ -19,8 +21,8 @@ p180.harmonize_participants()
 
 #### Data transformation
 p180.impute_metabolites()
-p180.transform_metabolites_log2()
-p180.zscore_normalize_metabolites()
+p180.transform_metabolites_log2(qtpad)
+p180.zscore_normalize_metabolites(qtpad)
 p180.replace_three_std()
 p180.remove_multivariate_outliers()
 p180.harmonize_participants()

@@ -319,9 +319,17 @@ class P180:
                     else:
                         print('There is something weird here')
 
-    def transform_metabolites_log2(self):
+    def transform_metabolites_log2(self,
+                                   qtpad=None):
         '''
-        Transform metabolites concentration values to log2 values
+        Transform metabolites concentration values to log2 values.
+        Optionally stratify by sex using the qtpad dataset
+
+        Parameters
+        ----------
+        qtpad: None or QT_pad
+            QT_pad to stratify transformation by sex.
+            Participants not in qtpad are removed.
 
         Returns
         ----------
@@ -329,15 +337,37 @@ class P180:
             data with metabolite values log2 transformed
         '''
         print('-----Log2 transform-----\n')
-        for i in range(len(self.data)):
-            self.data[i] = np.log2(self.data[i])
+        if qtpad is not None:
+            for i in range(len(self.data)):
+                dat = pd.merge(qtpad.data['PTGENDER'],
+                               self.data[i],
+                               on='RID')
+                males_bool   = dat['PTGENDER'] == 'Male'
+                females_bool = dat['PTGENDER'] == 'Female'
+                males_dat    = np.log2(dat.drop(['PTGENDER'],
+                                       axis=1)[males_bool])
+                females_dat  = np.log2(dat.drop(['PTGENDER'],
+                                       axis=1)[females_bool])
+                final_dat    = pd.concat([females_dat,
+                                          males_dat])
+                self.data[i] = final_dat
+        else:
+            for i in range(len(self.data)):
+                self.data[i] = np.log2(self.data[i])
 
-    def zscore_normalize_metabolites(self):
+    def zscore_normalize_metabolites(self,
+                                     qtpad=None):
         '''
         Apply z-score normalization to metabolites values to mean center 
         and unit variance, by substracting whole column by mean, 
         and dividing by the standard deviation
-        The datasets are merged to prevent bias (PERHAPS NOT!!!!!)
+        Optionally stratify by sex using the qtpad dataset
+
+        Parameters
+        ----------
+        qtpad: None or QT_pad
+            QT_pad to stratify transformation by sex.
+            Participants not in qtpad are removed.
 
         Returns
         ----------
@@ -345,17 +375,29 @@ class P180:
             data with normalized values
         '''
         print('-----Z-score normalizing metabolites-----\n')
-        for i in range(len(self.data)):
-            self.data[i] = self.data[i].apply(stats.zscore,
-                                              nan_policy='omit')
-        #for i in range(2):
-        #    d = pd.concat([self.data[i], 
-        #                   self.data[i+2]])
-        #    d = d.apply(stats.zscore,
-        #                nan_policy='omit')
-        #    self.data[i]   = d.loc[self.data[i].index]
-        #    self.data[i+2] = d.loc[self.data[i+2].index]
-    
+        if qtpad is not None:
+            for i in range(len(self.data)):
+                dat = pd.merge(qtpad.data['PTGENDER'],
+                               self.data[i],
+                               on='RID')
+                males_bool   = dat['PTGENDER'] == 'Male'
+                females_bool = dat['PTGENDER'] == 'Female'
+                males_dat    = dat.drop(['PTGENDER'],
+                                        axis=1)[males_bool].\
+                                   apply(stats.zscore,
+                                         nan_policy='omit')
+                females_dat  = dat.drop(['PTGENDER'],
+                                        axis=1)[females_bool].\
+                                   apply(stats.zscore,
+                                         nan_policy='omit')
+                final_dat    = pd.concat([females_dat,
+                                          males_dat])
+                self.data[i] = final_dat
+        else:
+            for i in range(len(self.data)):
+                self.data[i] = self.data[i].apply(stats.zscore,
+                                                  nan_policy='omit')
+
     def replace_three_std(self):
         '''
         Replace values higher or lower than 3 standard deviations
@@ -678,7 +720,8 @@ class QT_pad:
         '''
         Apply z-score normalization to phenotype values to mean center 
         and unit variance, by substracting whole column by mean, 
-        and dividing by the standard deviation
+        and dividing by the standard deviation.
+        Apply sex stratification before normalization
 
         Returns
         ----------
@@ -686,8 +729,19 @@ class QT_pad:
             data with normalized values
         '''
         print('-----Z-score normalizing phenotypes-----\n')
-        self.data[self.phenotypes] = self.data[self.phenotypes].\
-                                          apply(stats.zscore,
-                                                nan_policy='omit')
+        dat_phenos   = self.data[self.phenotypes]
+        males_bool   = self.data['PTGENDER'] == 'Male'
+        females_bool = self.data['PTGENDER'] == 'Female'
+        dat_males    = dat_phenos[males_bool].apply(stats.zscore,
+                                                    nan_policy='omit')
+        dat_females  = dat_phenos[females_bool].apply(stats.zscore,
+                                                      nan_policy='omit')
+        final_dat    = pd.concat([dat_females,
+                                  dat_males])
+        extra_cols   = self.data.drop(self.phenotypes,
+                                      axis=1)
+        return_dat   = pd.merge(extra_cols,
+                                final_dat,
+                                on='RID')
+        self.data = return_dat
                                            
-    
