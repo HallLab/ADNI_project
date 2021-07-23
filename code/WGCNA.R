@@ -4,6 +4,9 @@
 library(WGCNA)
 library(dplyr)
 
+#### 0.5 PARALLEL PROCESSING ####
+enableWGCNAThreads()
+
 #### 1. FUNCTIONS ####
 
 choose_sf_power <- function(data,
@@ -245,6 +248,22 @@ compare_modules <- function(dat1,
      return(mp)
 }
 
+plot_heatmap <- function(TOM,
+                         tree,
+                         colors){
+     # Plot the TOM as a heatmap
+
+     plotDiss = (TOM)
+     diag(plotDiss) = NA
+     filename = '../results/plots/heatmap.pdf'
+     pdf(file = filename)
+     TOMplot(plotDiss, 
+             tree,
+             colors,
+             main = "Network heatmap plot")
+     dev.off()
+}
+
 #### 2. DATA ####
 p180  = read.csv('../results/p180_cleaned.csv')
 qtpad = read.csv('../data/ADNI_adnimerge_20170629_QT-freeze.csv')
@@ -272,7 +291,14 @@ choose_sf_power(p180)
 #### 5. NETWORK CONSTRUCTION AND MODULE DETECTION ####
 wgcna <- compute_wgcna(p180)
 
-# Save the eigenmetabolites
+#### 6. HEATMAP VISUALIZATION ####
+plot_heatmap(wgcna[[1]],
+             wgcna[[2]],
+             wgcna[[3]])
+
+#### 7. SAVING FILES AND EXPORTING ####
+
+# Save files
 write.csv(wgcna[[4]],
           file="../results/eigenmetabolites.csv",
           row.names=FALSE)
@@ -282,5 +308,23 @@ write.table(wgcna[[3]],
            row.names=FALSE,
            col.names=FALSE,
            quote=FALSE)
-# Save module colors and labels for use in subsequent parts
-#save(MEs, moduleLabels, moduleColors, geneTree, file = "FemaleLiver-02-networkConstruction-stepByStep.RData")
+
+# Export to cytoscape
+modules = 'turquoise'
+in_module = wgcna[[3]] == modules
+
+cyt = exportNetworkToCytoscape(wgcna[[1]][in_module, in_module],
+                         edgeFile = paste("../results/CytoscapeInput-edges-",
+                                          paste(modules,
+                                                collapse="-"),
+                                          ".txt",
+                                          sep=""),
+                         nodeFile = paste("../results/CytoscapeInput-nodes-",
+                                          paste(modules,
+                                                collapse="-"),
+                                          ".txt",
+                                          sep=""),
+                         weighted = TRUE,
+                         threshold = 0.05,
+                         nodeNames = names(p180[in_module]),
+                         nodeAttr = wgcna[[3]][in_module])
