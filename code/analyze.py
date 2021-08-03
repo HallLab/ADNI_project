@@ -18,7 +18,7 @@ class ADNI_sex:
         Parameters
         ----------
         metabolites: pd.DataFrame
-            dataframe with metabolite data
+            dataframe with metabolite data, with or withouth WGCNA modules
         QT_pad: clean.QT_pad
             dataframe with imaging data and covariates
 
@@ -26,12 +26,14 @@ class ADNI_sex:
         ----------
         data: list pd.DataFrame
             merged dataframe split by sex
-        sexes: list
+        sexes: list of str
             list of the order of sexes
-        phenotypes: list
+        phenotypes: list of str
             phenotype names
-        covariates: list
+        covariates: list of str
             covariate names
+        module_colors: list of str
+            module colors identified with 'ME'
         '''
         self.sexes = ['Female',
                       'Male']
@@ -44,6 +46,10 @@ class ADNI_sex:
         dat.index.rename('ID',
                          inplace=True)
 
+        # Identify module names
+        cols = dat.columns.to_list()
+        self.module_colors = [v for v in cols if v.startswith('ME')]
+        
         #### Split by sex
         dats = []
         for i in range(2):
@@ -56,9 +62,33 @@ class ADNI_sex:
         
         self.data = dats
 
-    def run_ewas(self):
+    def zscore_normalize_eigenmetabolites(self):
+        '''
+        Zscore normalize the eigenmetabolites stratified by sex
+
+        Returns
+        ----------
+        data: list of pd.Dataframe
+            list of data with normalized eigenmetabolites
+        '''
+        if not self.module_colors:
+            print('There are no eigenmetabolites in data')
+        else:
+            for i in range(len(self.data)):
+                self.data[i].loc[:,self.module_colors] = \
+                     self.data[i].loc[:,self.module_colors].\
+                         apply(stats.zscore,
+                               nan_policy='omit')
+
+    def run_ewas(self,
+                 on_modules:bool=False):
         '''
         Run an EWAS for each phenotype
+
+        Parameters
+        ----------
+        on_modules: bool
+            Whether to run the EWAS using single metabolites or eigenmetabolites
 
         Returns
         ----------
@@ -66,11 +96,31 @@ class ADNI_sex:
             list of results based on sex by phenotype order 
         '''
         results = []
-        for s in range(len(self.sexes)):
+        data    = []
+        if on_modules:
+            if not self.module_colors:
+                print('There are no eigenmetabolites in data')
+            else:
+                # Don't analyze grey module
+                modules = self.module_colors.copy()
+                if 'MEgrey' in modules:
+                    modules.remove('MEgrey')
+                for s in range(len(self.sexes)):
+                    keep_cols = modules + \
+                                self.phenotypes + \
+                                self.covariates
+                    d = self.data[s].loc[:,keep_cols]
+                    data.append(d)
+        else:
+            for s in range(len(self.sexes)):
+                d = self.data[s].drop(columns=self.module_colors)
+                data.append(d)
+        
+        for i in range(len(data)):                
             for p in self.phenotypes:
                 drop_phenos  = [m for m in self.phenotypes \
                                 if m != p]
-                data_temp = self.data[s].drop(columns=drop_phenos)
+                data_temp = data[i].drop(columns=drop_phenos)
                 clarite.modify.categorize(data_temp)
                 r = clarite.analyze.ewas(p,
                                          self.covariates,
@@ -96,24 +146,24 @@ class ADNI_sex:
         results_meta = []
         
         for i in range(len(indices)):
-            ws = []
-            for l in range(len(indices[i])):
-                res_temp = self.results[indices[i][l]]
-                w = np.array(1 / np.power(\
-                            res_temp['SE'], 2))
-                ws.append(w)
-            meta_se = np.sqrt( 1 / sum(ws) )
-            up_term = np.zeros(meta_se.shape)
-            for m in range(len(indices[i])):
-                temp = np.array(res_temp['Beta'] * ws[m])
-                up_term = up_term + temp
-                
-            meta_beta = up_term / sum(ws)
+            res_temp1 = self.results[indices[i][0]]
+            res_temp2 = self.results[indices[i][1]]
+            meta_se = np.sqrt( 1 / 
+                  ( ( 1 / np.power(res_temp1['SE'], 2) ) + \
+                    ( 1 / np.power(res_temp2['SE'], 2) ) ) )
+            
+            meta_beta = ( (res_temp1['Beta'] /
+                          np.power(res_temp1['SE'],2)) +
+                          (res_temp2['Beta'] /
+                          np.power(res_temp2['SE'],2)) ) / \
+                        ( (1/np.power(res_temp1['SE'],2)) + 
+                          (1/np.power(res_temp2['SE'],2)) ) 
+
             zeta = meta_beta / meta_se
             pval = 2 * stats.norm.cdf(-abs(zeta))
 
             final_dat = pd.DataFrame(meta_se, 
-                                    index=res_temp.index, 
+                                    index=res_temp1.index, 
                                     columns=['SE'])
             final_dat['Beta']   = meta_beta
             final_dat['pvalue'] = pval
@@ -140,24 +190,28 @@ class ADNI_sex:
             t1 = np.array(res_temp1['Beta']) - \
                  np.array(res_temp2['Beta'])
         
-            t2 = np.sqrt(np.power(np.array(res_temp1['SE']), 2) + \
-                         np.power(np.array(res_temp2['SE']), 2))
+            t2 = np.sqrt(np.power(res_temp1['SE'], 2) + \
+                         np.power(res_temp2['SE'], 2))
         
             zdiff = t1 / t2
             pval  = 2*stats.norm.cdf(-abs(zdiff))
-            pval_bf = multipletests(pval)[1]
             final_dat = pd.DataFrame(zdiff, 
                                      index=res_temp1.index, 
                                      columns=['Z'])
             final_dat['pvalue'] = pval
-            final_dat['pvalue_bonferroni'] = pval_bf
             results_diff.append(final_dat)
         self.results_diff = results_diff
 
-    def categorize_sex_diff(self):
+    def categorize_sex_diff(self,
+                            on_modules:bool=False):
         '''
         Categorize the results from the sex difference.
         Be sure to run sex_diff_test and meta_analysis before
+
+        Parameters
+        ----------
+        on_modules: bool
+            whether the categorization is done on module results
 
         Returns
         ----------
@@ -165,8 +219,12 @@ class ADNI_sex:
             dataframe of the sex difference plus the category 
         '''
         indices = [[0,2], [1,3]]
-        filter_t = 10 ** -5
-        diff_t   = 0.05/55
+        filter_t = 0.05
+        if on_modules:
+            n_modules = len(self.module_colors)-1
+            diff_t = 0.05/n_modules
+        else:
+            diff_t   = 0.05/55
 
         for i in range(len(self.results_diff)):
             dat_female = self.results[indices[i][0]]
@@ -177,10 +235,10 @@ class ADNI_sex:
             # Filtering first
             overall_filter = self.results_meta[i]['pvalue'] < filter_t
             if sum(overall_filter) > 0:
-                bonf_filter_t  = 0.05 / sum(overall_filter)
+                bonf_filter_t = 0.05 / sum(overall_filter)
+                filter_diff   = self.results_diff[i]['pvalue'] < bonf_filter_t
             else:
-                bonf_filter_t  = 0.05
-            filter_diff = self.results_diff[i]['pvalue'] < bonf_filter_t
+                filter_diff = self.results_diff[i]['pvalue'] > 100 # All false
 
             significants = total_diff | \
                            filter_diff
@@ -221,15 +279,27 @@ class ADNI_sex:
             self.results_diff[i].loc[keep_pure,'difference_type']  =\
                 'Pure'
 
-    def categorize_arnold20(self):
+    def categorize_arnold20(self, 
+                            on_modules:bool=False):
         '''
         Categorize based on criteria from Arnold et al 2020 paper
 
-        Returns:
+        Parameters
+        ----------
+        on_modules: bool
+            whether the categorization is done on module results
+
+        Returns
+        ----------
         results_diff: pd.DataFrame
             dataframe of the sex difference plus the category 
         '''
-        b_alpha = 0.05/55
+        if on_modules:
+            n_modules = len(self.module_colors)-1
+            b_alpha = 0.05/n_modules
+        else:
+            b_alpha   = 0.05/55
+
         for i in range(len(self.results_diff)):
             f = i + 2 # index for male sex specific result
             filter_1 = self.results_meta[i]['pvalue'] < b_alpha
@@ -256,7 +326,8 @@ class ADNI_sex:
                                      'difference_arnold'] = 'Sex-specific'
     
     def save_to_csv(self,
-                    savepath:str):
+                    savepath:str,
+                    modules:bool=False):
         '''
         Save file to csv 
 
@@ -291,9 +362,14 @@ class ADNI_sex:
             final_dat['difference_arnold'] = \
                         self.results_diff[i]['difference_arnold']
 
-            name = 'Preliminary_results_' +\
-                   self.phenotypes[i] +\
-                   '.csv'
+            if modules:
+                name = 'Preliminary_results_' +\
+                        self.phenotypes[i] +\
+                        '_modules.csv'
+            else:
+                name = 'Preliminary_results_' +\
+                        self.phenotypes[i] +\
+                        '.csv'
             filename = os.path.join(savepath,
                                     name)
             final_dat.to_csv(filename)
