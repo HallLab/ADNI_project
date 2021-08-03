@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=1:rhel7
-#PBS -l walltime=1:00:00
+#PBS -l nodes=1:ppn=6:rhel7
+#PBS -l walltime=2:00:00
 #PBS -l pmem=8gb
 #PBS -A mah546_c_g_bc_default #or open
 #PBS -j oe
@@ -15,14 +15,19 @@ conda activate adni_project
 
 # Set up directory
 mkdir results/
-mkdir data/
+mkdir results/plots
 # Copy data sets
-for file in `cat ADNI_data_files.txt`; do cp "$file" "data/"; done
+for file in `cat ADNI_data_files.txt`
+do
+cp "$file" "data/"
+done # Comment this for loop if manually copying the files
 
 # Run pipeline
 cd code/
 echo '-----Running QC-----'
 python 01_QC.py 
+echo '-----Running WGCNA-----'
+Rscript WGCNA.R
 echo '-----Running Analysis-----'
 python 02_PreliminaryAnalysis.py
 
