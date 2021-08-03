@@ -27,5 +27,11 @@ p180.replace_three_std()
 p180.remove_multivariate_outliers()
 p180.harmonize_participants()
 
+#### Medication data
+meds = clean.Meds()
+meds.keep_baseline()
+meds.transform_to_binary()
+p180.residuals_from_meds(meds)
+
 #### Save files
 p180.save_files()

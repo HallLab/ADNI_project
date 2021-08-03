@@ -1,8 +1,10 @@
 import pandas as pd
 import pingouin as pg
 import numpy as np
-from sklearn import preprocessing
+from warnings import simplefilter
+from sklearn import preprocessing, linear_model
 import scipy.stats as stats
+
 
 class P180:
     '''
@@ -429,7 +431,7 @@ class P180:
                   ' values in ' +
                   self.cohort[i] + ' ' + 
                   self.type[i] + '\n')
-
+    
     def _print_metabolites_removed(self, 
                                    remove_met_table: pd.DataFrame = None,
                                    index: int = None):
@@ -643,7 +645,37 @@ class P180:
                     self.data[i][\
                     self.data_meta[i]['Plate.Bar.Code'] == \
                         plates_ID[j]] / correction
+    
+    def residuals_from_meds(self,
+                            meds):
+        '''
+        Replace data values with residuals from regression on medication
+        dataset.
+        Meds dataset is a binary dataframe (presence/absence) of medication
+        classes
 
+        Parameters
+        ----------
+        meds: Meds
+        '''
+        print('-----Replacing values with residuals-----\n')
+        simplefilter(action='ignore', 
+                     category=pd.errors.PerformanceWarning)
+        for i in range(len(self.data)):
+            for col in self.data[i].columns:
+                regr = linear_model.LinearRegression()
+                new_dat = pd.merge(self.data[i][col],
+                                   meds.data,
+                                   left_on='RID',
+                                   right_on='RID')
+
+                Y = new_dat[col]
+                X = new_dat.loc[:, new_dat.columns != col]
+                regr.fit(X, Y)
+                predicted = regr.predict(X)
+                residuals = Y - predicted
+                self.data[i][col] = residuals
+        
     def save_files(self):
         '''
         Save cleaned and QCed files to a csv
@@ -744,4 +776,54 @@ class QT_pad:
                                 final_dat,
                                 on='RID')
         self.data = return_dat
-                                           
+
+class Meds:
+    '''
+    Medication class
+    '''
+    def __init__(self):
+        '''
+        Initiate the class
+
+        Attributes
+        ----------
+        data: pd.Dataframe
+            medication data
+        '''
+        med_path = '../data/ADMCPATIENTDRUGCLASSES_20170512.csv'
+
+        dat = pd.read_csv(med_path).\
+                 set_index(['RID','VISCODE2','Phase'])
+        dat.drop('NA',
+                 axis=1,
+                 inplace=True)
+
+        self.data = dat
+    
+    def keep_baseline(self):
+        '''
+        Keep only baseline measurements in data
+
+        Returns
+        ----------
+        data: pd.Dataframe
+            data with only bl
+        '''
+        idx = pd.IndexSlice
+        self.data = self.data.loc[idx[:, 'bl'], :]
+        
+    def transform_to_binary(self):
+        '''
+        Transform the dataset into a binary 0/1 matrix
+
+        Returns
+        ----------
+        data: pd.Dataframe
+            binary matrix
+        '''
+        # Replacing not NA values
+        self.data[self.data.notna()] = 1
+
+        # Replacing NA values
+        self.data = self.data.replace(np.nan, 
+                                      0)

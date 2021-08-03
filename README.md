@@ -36,13 +36,24 @@ conda activate adni_project
 pip install git+https://github.com/HallLab/clarite-python.git
 ```
 
+## Download medication files from Synapse
+
+Before replicating the analysis, make sure you have an account created on [Synapse](https://www.synapse.org/).
+Create the `data` folder by running:
+
+```bash
+mkdir data
+```
+
+Manually download the medication [file](https://www.synapse.org/#!Synapse:syn12179110) in the `data` folder.
+
 ## Replicate the analysis
 
 Depending on whether you are replicating the analysis on your local machine or sending the job to a cluster, you can run either `run_local.sh` or `run_cluster.sh`
 
 ### On cluster
 
-On your server terminal, run the command
+On your server terminal, run the following command:
 
 ```bash
 qsub run_cluster.sh
@@ -50,7 +61,7 @@ qsub run_cluster.sh
 
 The parameters used in the script are the ones used in the Penn State Roar server.
 Depending on the system you will need to modify, remove, or add parameters to the script.
-The script also contains the creation of the `data` folder and the copying of the needed ADNI data sets; you can either modify the paths of the data sets in the `ADNI_data_files.txt` file to match yours, or manually create the folder, copy the files, and comment the lines in the `run_cluster.sh` script.
+The script also contains the copying of the needed ADNI data sets into the `data` folder; you can either modify the paths of the data sets in the `ADNI_data_files.txt` file to match yours, or manually copy the files, and comment the lines in the `run_cluster.sh` script.
 In the next section there is a brief description on the ADNI data sets needed.
 
 ### On local machine

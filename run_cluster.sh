@@ -16,9 +16,11 @@ conda activate adni_project
 # Set up directory
 mkdir results/
 mkdir results/plots
-mkdir data/
 # Copy data sets
-for file in `cat ADNI_data_files.txt`; do cp "$file" "data/"; done
+for file in `cat ADNI_data_files.txt`
+do
+cp "$file" "data/"
+done # Comment this for loop if manually copying the files
 
 # Run pipeline
 cd code/
