@@ -4,19 +4,16 @@ import analyze
 import pandas as pd
 
 #### Read results
-p180 = pd.read_csv('../results/p180_cleaned.csv').\
-          set_index('RID')
-eigenmet = pd.read_csv('../results/eigenmetabolites.csv')
-eigenmet = eigenmet.set_index(p180.index)
-p180 = pd.merge(p180,
-                eigenmet,
-                on='RID')
-qtpad = clean.QT_pad()
-qtpad.keep_baseline()
-qtpad.keep_phenotypes()
-qtpad.zscore_normalize_phenotypes()
+p180_pheno = analyze.ADNI_sex(metabolite_type='p180')
+nmr_pheno = analyze.ADNI_sex(metabolite_type='nmr')
 
-adni_dat = analyze.ADNI_sex(p180, 
+#### Run analysis
+p180_pheno.stratified_association()
+nmr_pheno.stratified_association()
+
+
+
+adni_dat = analyze.ADNI_sex(metabolites, 
                             qtpad)
 adni_dat.zscore_normalize_eigenmetabolites()
 

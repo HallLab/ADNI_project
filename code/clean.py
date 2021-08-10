@@ -5,10 +5,9 @@ from warnings import simplefilter
 from sklearn import preprocessing, linear_model
 import scipy.stats as stats
 
-
 class P180:
     '''
-    Biocrates p180 metabolomics platform class
+    Biocrates p180 raw metabolomics platform class
     '''
     def __init__(self):
         '''
@@ -96,7 +95,7 @@ class P180:
         for i in duplicates_ID:
             val = fast_dat.loc[i].max()
             fast_dat.drop(i,
-                          axis="index",
+                          axis='index',
                           inplace=True)
             fast_dat.loc[i] = val
         self.fasting = fast_dat.sort_index()
@@ -357,49 +356,6 @@ class P180:
             for i in range(len(self.data)):
                 self.data[i] = np.log2(self.data[i])
 
-    def zscore_normalize_metabolites(self,
-                                     qtpad=None):
-        '''
-        Apply z-score normalization to metabolites values to mean center 
-        and unit variance, by substracting whole column by mean, 
-        and dividing by the standard deviation
-        Optionally stratify by sex using the qtpad dataset
-
-        Parameters
-        ----------
-        qtpad: None or QT_pad
-            QT_pad to stratify transformation by sex.
-            Participants not in qtpad are removed.
-
-        Returns
-        ----------
-        data: pd.Dataframe
-            data with normalized values
-        '''
-        print('-----Z-score normalizing metabolites-----\n')
-        if qtpad is not None:
-            for i in range(len(self.data)):
-                dat = pd.merge(qtpad.data['PTGENDER'],
-                               self.data[i],
-                               on='RID')
-                males_bool   = dat['PTGENDER'] == 'Male'
-                females_bool = dat['PTGENDER'] == 'Female'
-                males_dat    = dat.drop(['PTGENDER'],
-                                        axis=1)[males_bool].\
-                                   apply(stats.zscore,
-                                         nan_policy='omit')
-                females_dat  = dat.drop(['PTGENDER'],
-                                        axis=1)[females_bool].\
-                                   apply(stats.zscore,
-                                         nan_policy='omit')
-                final_dat    = pd.concat([females_dat,
-                                          males_dat])
-                self.data[i] = final_dat
-        else:
-            for i in range(len(self.data)):
-                self.data[i] = self.data[i].apply(stats.zscore,
-                                                  nan_policy='omit')
-
     def replace_three_std(self):
         '''
         Replace values higher or lower than 3 standard deviations
@@ -612,7 +568,7 @@ class P180:
             for j in duplicates_ID:
                 consolidated = list(self.data[i].loc[j].mean())
                 self.data[i].drop(j,
-                                  axis="index",
+                                  axis='index',
                                   inplace=True)
                 self.data[i].loc[j] = consolidated
             self.data[i].sort_index(inplace=True)
@@ -713,25 +669,16 @@ class QT_pad:
                            'Entorhinal']
         self.covariates = ['AGE',
                            'PTEDUCAT',
-                           'APOE4']
+                           'APOE4',
+                           'PTGENDER']
         qt_path = '../data/ADNI_adnimerge_20170629_QT-freeze.csv'
 
         dat = pd.read_csv(qt_path).\
                  set_index(['RID','VISCODE'])
 
+        dat = _keep_baseline(dat)
+
         self.data = dat
-
-    def keep_baseline(self):
-        '''
-        Keep only baseline measurements in data
-
-        Returns
-        ----------
-        data: pd.Dataframe
-            data with only bl
-        '''
-        idx = pd.IndexSlice
-        self.data = self.data.loc[idx[:, 'bl'], :]
 
     def keep_phenotypes(self):
         '''
@@ -743,8 +690,7 @@ class QT_pad:
             data with the phenotypes, the RID and covariates
         '''
         keep_columns = self.phenotypes +\
-                       self.covariates +\
-                       ['PTGENDER']
+                       self.covariates
         self.data = self.data.reset_index().set_index('RID')
         self.data = self.data.loc[:,keep_columns]
 
@@ -777,6 +723,106 @@ class QT_pad:
                                 on='RID')
         self.data = return_dat
 
+class NMR:
+    '''
+    Nightingale NMR raw data class 
+    '''
+    def __init__(self):
+        '''
+        Initiate the class
+
+        Attributes
+        ----------
+        metabolites: pd.Dataframe
+            metabolomic concentration data
+        qc_tags: pd.Dataframe
+            quality control tags
+        '''
+        nmr_path = '../data/ADNINIGHTINGALE2.csv'
+        dat = pd.read_csv(nmr_path,
+                          na_values='TAG').\
+                 set_index(['RID','VISCODE2'])
+        dat.drop(['VISCODE',
+                  'EXAMDATE',
+                  'SAMPLEID',
+                  'GLOBAL.SPEC.ID',
+                  'update_stamp'],
+                 axis=1,
+                 inplace=True)
+        qc_tag_names = ['EDTA_PLASMA',
+                        'CITRATE_PLASMA',
+                        'LOW_ETHANOL',
+                        'MEDIUM_ETHANOL',
+                        'HIGH_ETHANOL',
+                        'ISOPROPYL_ALCOHOL',
+                        'N_METHYL_2_PYRROLIDONE',
+                        'POLYSACCHARIDES',
+                        'AMINOCAPROIC_ACID',
+                        'LOW_GLUCOSE',
+                        'HIGH_LACTATE',
+                        'HIGH_PYRUVATE',
+                        'LOW_GLUTAMINE_OR_HIGH_GLUTAMATE',
+                        'GLUCONOLACTONE',
+                        'LOW_PROTEIN',
+                        'UNEXPECTED_AMINO_ACID_SIGNALS',
+                        'UNIDENTIFIED_MACROMOLECULES',
+                        'UNIDENTIFIED_SMALL_MOLECULE_A',
+                        'UNIDENTIFIED_SMALL_MOLECULE_B',
+                        'UNIDENTIFIED_SMALL_MOLECULE_C',
+                        'BELOW_LIMIT_OF_QUANTIFICATION']
+        qc_tags = dat.loc[:,qc_tag_names]
+        
+        # Remove qc tags columns that have only 0
+        remove_qc_cols = qc_tags.columns[qc_tags.sum() == 0]
+        qc_tags.drop(remove_qc_cols,
+                     axis=1,
+                     inplace=True)
+
+        dat.drop(qc_tag_names,
+                 axis=1,
+                 inplace=True)
+
+        dat = _keep_baseline(dat)
+        qc_tags = _keep_baseline(qc_tags)
+
+        self.metabolites = dat
+        self.qc_tags = qc_tags
+    
+    def average_replicates(self):
+        '''
+        Generate averages of replicated metabolomic measurements
+
+        Returns
+        ----------
+        metabolites: pd.Dataframe
+            metabolite concentration values with averaged replicates
+        '''
+        print('-----Averaging replicates-----\n')
+        duplicated_IDs = self.metabolites.index[\
+                              self.metabolites.index.duplicated()].\
+                                  unique()
+
+        for i in duplicated_IDs:
+            ind = pd.MultiIndex.from_tuples([i],
+                                    names=['RID',
+                                           'VISCODE2'])
+            averaged = pd.DataFrame(self.metabolites.loc[i,:].mean()).T
+            averaged = averaged.set_index(ind)
+            self.metabolites.drop(i[0],
+                                  axis='index',
+                                  inplace=True)
+            self.metabolites.append(averaged)
+        self.metabolites.sort_index(inplace=True)
+    
+    def save_files(self):
+        '''
+        Save NMR data to csv 
+        '''
+        print('-----Saving NMR data to .csv-----\n')
+        respath = '~/work/ADNI_project/results/'
+        name = 'nmr_cleaned.csv'
+        self.metabolites.to_csv(respath + name)
+
 class Meds:
     '''
     Medication class
@@ -798,19 +844,9 @@ class Meds:
                  axis=1,
                  inplace=True)
 
-        self.data = dat
-    
-    def keep_baseline(self):
-        '''
-        Keep only baseline measurements in data
+        dat = _keep_baseline(dat)
 
-        Returns
-        ----------
-        data: pd.Dataframe
-            data with only bl
-        '''
-        idx = pd.IndexSlice
-        self.data = self.data.loc[idx[:, 'bl'], :]
+        self.data = dat
         
     def transform_to_binary(self):
         '''
@@ -827,3 +863,92 @@ class Meds:
         # Replacing NA values
         self.data = self.data.replace(np.nan, 
                                       0)
+
+def zscore_normalize(metabolites,
+                     qtpad=None):
+    '''
+    Apply z-score normalization to metabolites values to mean center 
+    and unit variance, by substracting whole column by mean, 
+    and dividing by the standard deviation
+    Optionally stratify by sex using the qtpad dataset
+
+    Parameters
+    ----------
+    metabolites: pd.Dataframe
+        Dataframe with metabolite concentration and RID as index
+    qtpad: None or QT_pad
+        QT_pad to stratify transformation by sex.
+        Participants not in qtpad are removed.
+
+    Returns
+    ----------
+    normalized_metabolites: pd.Dataframe
+        metabolite concentration values normalized
+    '''
+    print('-----Z-score normalizing metabolites-----\n')
+    normalized_metabolites = []
+    if type(metabolites) == list:
+        for i in range(len(metabolites)):
+            if qtpad is not None:
+                dat = pd.merge(qtpad.data['PTGENDER'],
+                               metabolites[i],
+                               on='RID')
+                males_bool   = dat['PTGENDER'] == 'Male'
+                females_bool = dat['PTGENDER'] == 'Female'
+                males_dat    = dat.drop(['PTGENDER'],
+                                        axis=1)[males_bool].\
+                                   apply(stats.zscore,
+                                         nan_policy='omit')
+                females_dat  = dat.drop(['PTGENDER'],
+                                        axis=1)[females_bool].\
+                                   apply(stats.zscore,
+                                         nan_policy='omit')
+                final_dat    = pd.concat([females_dat,
+                                          males_dat])
+            else:
+                final_dat = metabolites[i].apply(stats.zscore,
+                                                 nan_policy='omit')
+
+            normalized_metabolites.append(final_dat)
+    else:
+        if qtpad is not None:
+            dat = pd.merge(qtpad.data['PTGENDER'],
+                           metabolites,
+                           on='RID')
+            males_bool   = dat['PTGENDER'] == 'Male'
+            females_bool = dat['PTGENDER'] == 'Female'
+            males_dat    = dat.drop(['PTGENDER'],
+                                    axis=1)[males_bool].\
+                               apply(stats.zscore,
+                                     nan_policy='omit')
+            females_dat  = dat.drop(['PTGENDER'],
+                                    axis=1)[females_bool].\
+                               apply(stats.zscore,
+                                     nan_policy='omit')
+            final_dat    = pd.concat([females_dat,
+                                      males_dat])
+        else:
+            final_dat = metabolites.apply(stats.zscore,
+                                             nan_policy='omit')
+        normalized_metabolites = final_dat
+    
+    return(normalized_metabolites)
+
+def _keep_baseline(data):
+    '''
+    Remove all rows that don't belong to baseline 'bl'
+
+    Parameters
+    ----------
+    data: pd.Dataframe
+        dataframe with VISCODE or VISCODE2 as index
+
+    Returns
+    ----------
+    baseline_data: pd.Dataframe
+        dataframe with only baseline measurements
+    '''
+    idx = pd.IndexSlice
+    baseline_data = data.loc[idx[:, 'bl'], :]
+
+    return(baseline_data)
