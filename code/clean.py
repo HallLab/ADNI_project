@@ -637,7 +637,7 @@ class P180:
         Save cleaned and QCed files to a csv
         '''
         print('-----Saving p180 file to .csv-----')
-        respath = '~/work/ADNI_project/results/'
+        respath = '../results/'
         dat1 = pd.concat([self.data[0],
                           self.data[1]],
                           axis=1)
@@ -819,7 +819,7 @@ class NMR:
         Save NMR data to csv 
         '''
         print('-----Saving NMR data to .csv-----\n')
-        respath = '~/work/ADNI_project/results/'
+        respath = '../results/'
         name = 'nmr_cleaned.csv'
         self.metabolites.to_csv(respath + name)
 
