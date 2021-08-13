@@ -259,7 +259,7 @@ compute_wgcna <- function(metabolites,
                           soft_power=6) {
      # Compute WGCNA or consensus WGCNA depending on input
      # We set minimum module size to 5, based on previous studies
-     # Returns list of TOM, tree, colors, eigenmetabolites, and RID
+     # Returns TOM, tree, colors, eigenmetabolites, and RID
      #
      # Parameters
      # ----------
@@ -272,7 +272,7 @@ compute_wgcna <- function(metabolites,
      #
      # Returns
      # ----------
-     # wgcna: list of TOM, tree, colors, eigenmetabolites, and RID
+     # wgcna: TOM, tree, colors, eigenmetabolites, and RID
      #
      if (class(metabolites) == "list") {
         # Generate multiExpr dataset for WGCNA
@@ -287,12 +287,12 @@ compute_wgcna <- function(metabolites,
 
           # Compute the TOM
           n_metabolites <- length(multi_expr[[1]]$data)
-          tom   <- vector(mode = "list",
-                          length = n_sets)
+          tom_list   <- vector(mode = "list",
+                               length = n_sets)
           for (i in 1:n_sets) {
              adjacency <- adjacency(multi_expr[[i]]$data,
                                     power = soft_power)
-             tom[[i]] <- TOMsimilarity(adjacency)
+             tom_list[[i]] <- TOMsimilarity(adjacency)
           }
 
           # Scale the TOM for compatibility
@@ -305,7 +305,7 @@ compute_wgcna <- function(metabolites,
           scale_quant <- rep(1, n_sets)
           scale_powers <- rep(1, n_sets)
           for (i in 1:n_sets) {
-               tom_scaling_samples[[i]] <- as.dist(tom[[i]])[scale_sample]
+               tom_scaling_samples[[i]] <- as.dist(tom_list[[i]])[scale_sample]
                # Calculate 95th percentile
                scale_quant[i] <- quantile(tom_scaling_samples[[i]],
                                           probs = scale_percentile,
@@ -313,24 +313,22 @@ compute_wgcna <- function(metabolites,
                # Scale the male TOM
                if (i > 1) {
                   scale_powers[i] <- log(scale_quant[1]) / log(scale_quant[i])
-                  tom[[i]] <- tom[[i]] ^ scale_powers[i]
+                  tom_list[[i]] <- tom_list[[i]] ^ scale_powers[i]
                }
           }
           # Perhaps generate a quantile plot to check changes in TOM
 
           # Calculate consensus TOM
-          consensus_tom <- pmin(tom[[1]],
-                                tom[[2]])
-          diss_tom <- 1 - consensus_tom
-
+          tom <- pmin(tom_list[[1]],
+                      tom_list[[2]])
      } else {
           data <- metabolites %>%
                   select(-RID)
           adjacency <- adjacency(data,
                                  power = soft_power)
           tom <- TOMsimilarity(adjacency)
-          diss_tom <- 1 - tom
      }
+     diss_tom <- 1 - tom
      # Call the hierarchical clustering function
      prelim_tree <- hclust(as.dist(diss_tom),
                            method = "average")
@@ -431,7 +429,7 @@ plot_heatmap <- function(tom,
      # Plot the TOM as a heatmap
 
      plot_diss <- (tom)
-     diag(plotDiss) <- NA
+     diag(plot_diss) <- NA
      filename <- paste0("../results/plots/",
                         plotname,
                         ".pdf")
