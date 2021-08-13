@@ -5,82 +5,190 @@ from warnings import simplefilter
 from sklearn import preprocessing, linear_model
 import scipy.stats as stats
 
-class P180:
+class Metabolites:
     '''
-    Biocrates p180 raw metabolomics platform class
+    Raw metabolomics platform class
     '''
-    def __init__(self):
+    def __init__(self,
+                 platform:str):
         '''
-        Initiate the class by loading all the datasets
+        Initiate the class by loading the corresponding metabolomics platform
+
+        Parameters
+        ----------
+        platform: str
+            type of metabolomics platform to load (p180 or nmr)
 
         Attributes
         ----------
-        cohort: List of str
+        data: list of pd.DataFrame or pd.DataFrame
+            dataframe or list of dataframe with concentration values
+        platform: str
+            type of metabolomics platform loaded (p180 or nmr)
+        fasting: pd.DataFrame
+            fasting information
+
+        Attributes (p180)
+        ----------
+        cohort: list of str
             List of the ADNI cohort (ADNI1 or ADNI2GO)
-        type: List of str
+        type: list of str
             List of the type of analysis (UPLC or FIA)
-        pool: List of Dataframe
+        pool: list of pd.DataFrame
             List of data from sample pools
-        data: List of Dataframe
-            List of data from participants
-        data_meta: List of Dataframe
+        data_meta: list of pd.DataFrame
             List of metadata from the participants data
-        pool_meta: List of Dataframe
+        pool_meta: list of pd.DataFrame
             List of metadata from the pool samples
+
+        Attributes (nmr)
+        ----------
+        qc_tags: pd.DataFrame
+            quality control tags
         '''
+        if platform!='p180' and platform!='nmr':
+            print('Select an appropriate metabolomics platform (p180 or nmr)')
+        else:
+            self.platform = platform
+
         #### SETTING PATHS AND FILES ####
         data_path = '../data/'
 
-        file_names = ['ADMCDUKEP180UPLC_01_15_16.csv',
-                      'ADMCDUKEP180FIA_01_15_16.csv',
-                      'ADMCDUKEP180UPLCADNI2GO.csv',
-                      'ADMCDUKEP180FIAADNI2GO.csv']
-        
         #### METABOLOMICS DATA ####
-        self.cohort = ['ADNI1',
-                       'ADNI1',
-                       'ADNI2GO',
-                       'ADNI2GO']
+        if self.platform == 'p180':
+            file_names = ['ADMCDUKEP180UPLC_01_15_16.csv',
+                          'ADMCDUKEP180FIA_01_15_16.csv',
+                          'ADMCDUKEP180UPLCADNI2GO.csv',
+                          'ADMCDUKEP180FIAADNI2GO.csv']
 
-        self.type = ['UPLC',
-                     'FIA',
-                     'UPLC',
-                     'FIA']
-        
-        na_values = ['< LOD',
-                     'No Interception',
-                     '>Highest CS']
-        
-        self.pool = []
-        self.data = []
-        self.lod  = []
-        self.data_meta = []
-        self.pool_meta = []
-        c = 0
-        for i in file_names:
-            dat = pd.read_csv(data_path + i,
-                              na_values=na_values).\
-                     set_index('RID')
-            #Divide between pool and proper samples
-            dat_pool = dat.loc[999999]
-            dat_data = dat.loc[0:99999]
-            #Divide between metadata and data (metabolites)
-            if self.cohort[c] == 'ADNI1':
-                col_index = list(range(0,7))       
-            elif self.cohort[c] == 'ADNI2GO':
-                col_index = list(range(0,24))
-            col_index.append(-1)
-            self.pool_meta.append(dat_pool.iloc[:,col_index])
-            self.data_meta.append(dat_data.iloc[:,col_index])
-            dat_data.drop(dat_data.columns[col_index],
-                          axis = 1,
-                          inplace = True)
-            dat_pool.drop(dat_pool.columns[col_index],
-                          axis = 1,
-                          inplace = True)
-            self.data.append(dat_data)
-            self.pool.append(dat_pool)
-            c = c + 1
+            self.cohort = ['ADNI1',
+                           'ADNI1',
+                           'ADNI2GO',
+                           'ADNI2GO']
+      
+            self.type = ['UPLC',
+                         'FIA',
+                         'UPLC',
+                         'FIA']
+            
+            na_values = ['< LOD',
+                         'No Interception',
+                         '>Highest CS']
+            
+            self.pool = []
+            self.data = []
+            self.lod  = []
+            self.data_meta = []
+            self.pool_meta = []
+            c = 0
+            for i in file_names:
+                dat = pd.read_csv(data_path + i,
+                                  na_values=na_values).\
+                         set_index('RID')
+                #Divide between pool and proper samples
+                dat_pool = dat.loc[999999]
+                dat_data = dat.loc[0:99999]
+                #Divide between metadata and data (metabolites)
+                if self.cohort[c] == 'ADNI1':
+                    col_index = list(range(0,7))       
+                elif self.cohort[c] == 'ADNI2GO':
+                    col_index = list(range(0,24))
+                col_index.append(-1)
+                self.pool_meta.append(dat_pool.iloc[:,col_index])
+                self.data_meta.append(dat_data.iloc[:,col_index])
+                dat_data.drop(dat_data.columns[col_index],
+                              axis = 1,
+                              inplace = True)
+                dat_pool.drop(dat_pool.columns[col_index],
+                              axis = 1,
+                              inplace = True)
+                self.data.append(dat_data)
+                self.pool.append(dat_pool)
+                c = c + 1
+
+            #### LOD VALUES ####
+            for i in range(len(self.data)):
+                filename = 'P180' + \
+                            str(self.type[i]) + \
+                            'LODvalues_' + \
+                            str(self.cohort[i]) + \
+                            '.csv'
+                # In lod value ADNI2GO FIA, the bar code plate
+                # needs fixing
+                if i == 3:
+                    dat = pd.read_csv(data_path + filename,
+                                      encoding='latin_1')
+                    barcode = dat['Plate Bar Code']
+                    barcode = barcode.str.split(' ',
+                                                expand = True)[2].\
+                                      str.replace(pat='/',
+                                                  repl='-')
+                    dat['Plate Bar Code'] = barcode
+                else:
+                    dat = pd.read_csv(data_path + filename)
+                # Metabolite names in lod don't match those in
+                # the data, replace '-', ':', '(', ')' and ' ' with '.'
+                old_columns = dat.columns
+                new_columns = old_columns.str.replace(pat='-|:|\(|\)| ',
+                                                      repl='.')
+                dat.columns = new_columns
+                # Change metabolite name from Met.So to Met.SO
+                if self.type[i] == 'UPLC':
+                    dat.rename(columns={'Met.SO':'Met.So'},
+                               inplace=True)
+                self.lod.append(dat)
+    
+        else:
+            file_names = 'ADNINIGHTINGALE2.csv'
+            dat = pd.read_csv(data_path + file_names,
+                              na_values='TAG').\
+                     set_index(['RID','VISCODE2'])
+            dat.drop(['VISCODE',
+                      'EXAMDATE',
+                      'SAMPLEID',
+                      'GLOBAL.SPEC.ID',
+                      'update_stamp'],
+                     axis=1,
+                     inplace=True)
+            qc_tag_names = ['EDTA_PLASMA',
+                            'CITRATE_PLASMA',
+                            'LOW_ETHANOL',
+                            'MEDIUM_ETHANOL',
+                            'HIGH_ETHANOL',
+                            'ISOPROPYL_ALCOHOL',
+                            'N_METHYL_2_PYRROLIDONE',
+                            'POLYSACCHARIDES',
+                            'AMINOCAPROIC_ACID',
+                            'LOW_GLUCOSE',
+                            'HIGH_LACTATE',
+                            'HIGH_PYRUVATE',
+                            'LOW_GLUTAMINE_OR_HIGH_GLUTAMATE',
+                            'GLUCONOLACTONE',
+                            'LOW_PROTEIN',
+                            'UNEXPECTED_AMINO_ACID_SIGNALS',
+                            'UNIDENTIFIED_MACROMOLECULES',
+                            'UNIDENTIFIED_SMALL_MOLECULE_A',
+                            'UNIDENTIFIED_SMALL_MOLECULE_B',
+                            'UNIDENTIFIED_SMALL_MOLECULE_C',
+                            'BELOW_LIMIT_OF_QUANTIFICATION']
+            qc_tags = dat.loc[:,qc_tag_names]
+            # Remove qc tags columns that have only 0
+            remove_qc_cols = qc_tags.columns[qc_tags.sum() == 0]
+            qc_tags.drop(remove_qc_cols,
+                         axis=1,
+                         inplace=True)
+    
+            dat.drop(qc_tag_names,
+                     axis=1,
+                     inplace=True)
+    
+            dat = _keep_baseline(dat)
+            dat = dat.droplevel('VISCODE2')
+            qc_tags = _keep_baseline(qc_tags)
+            qc_tags = qc_tags.droplevel('VISCODE2')
+
+            self.data = dat
+            self.qc_tags = qc_tags
         
         #### FASTING DATA ####
         fast_dat = pd.read_csv(data_path + 'BIOMARK.csv', 
@@ -100,36 +208,6 @@ class P180:
             fast_dat.loc[i] = val
         self.fasting = fast_dat.sort_index()
 
-        #### LOD VALUES ####
-        for i in range(len(self.data)):
-            filename = 'P180' + \
-                        str(self.type[i]) + \
-                        'LODvalues_' + \
-                        str(self.cohort[i]) + \
-                        '.csv'
-            # In lod value ADNI2GO FIA, the bar code plate
-            # needs fixing
-            if i == 3:
-                dat = pd.read_csv(data_path + filename,
-                                  encoding='latin_1')
-                barcode = dat['Plate Bar Code']
-                barcode = barcode.str.split(' ',
-                                            expand = True)[2].\
-                                  str.replace(pat='/',
-                                              repl='-')
-                dat['Plate Bar Code'] = barcode
-            else:
-                dat = pd.read_csv(data_path + filename)
-            # Metabolite names in lod don't match those in
-            # the data, replace '-', ':', '(', ')' and ' ' with '.'
-            old_columns = dat.columns
-            new_columns = old_columns.str.replace(pat='-|:|\(|\)| ', repl='.')
-            dat.columns = new_columns
-            # Change metabolite name from Met.So to Met.SO
-            if self.type[i] == 'UPLC':
-                dat.rename(columns={'Met.SO':'Met.So'}, inplace=True)
-            self.lod.append(dat)
-
     def remove_missing_metabolites(self,
                                    cutoff: float = 0.2):
         '''
@@ -138,34 +216,34 @@ class P180:
         Parameters
         ----------
         cutoff: float
-            Missing data removal cutoff. 
+            Missing data removal cutoff
 
         Returns
         ----------
-        data: pd.Dataframe
+        data: pd.DataFrame
             Dataframe with metabolites removed due to missingness
-        pool: pd.Dataframe
+        pool (p180): pd.DataFrame
             Dataframe with metabolites removed due to missingness
         '''
         print('-----Removing metabolites with missing data greater than ' +
               str(cutoff) + '-----')
-        for i in range(len(self.data)):
-            total_met = len(self.data[i])
-            remove_met_table = pd.DataFrame(\
-                               self.data[i].isna().sum(axis=0) / total_met,
-                               columns=['missing'])
-            remove_met_bool  = self.data[i].isna().sum(axis=0) / total_met \
-                               > cutoff
-            remove_met_table = remove_met_table[remove_met_bool]
-            self._print_metabolites_removed(remove_met_table, i)
-            #Remove metabolites from data and pool
-            self._remove_metabolites(remove_met_table, i)
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                remove_met_table = _estimate_delete_missingness(self.data[i])
+                self._print_metabolites_removed(remove_met_table, i)
+                #Remove metabolites from data and pool
+                self._remove_metabolites(remove_met_table, i)
+        elif self.platform == 'nmr':
+            remove_met_table = _estimate_delete_missingness(self.data)
+            self._print_metabolites_removed(remove_met_table)
+            self._remove_metabolites(remove_met_table)
 
     def remove_metabolites_cv(self,
                               cutoff: float = 0.2):
         '''
         Compute the coefficient of variation among duplicates or triplicates
-        for each metabolite and remove metabolites with CV higher than cutoff
+        for each metabolite and remove metabolites with CV higher than cutoff.
+        Can only be applied to p180 platform
 
         Parameters
         ----------
@@ -179,28 +257,32 @@ class P180:
         pool: pd.Dataframe
             Dataframe with metabolites removed due to high CV.
         '''
-        print('-----Removing metabolites with CV values greater than ' +
-              str(cutoff) + '-----')
-        for i in range(len(self.data)):
-            cv_interplate = []
-            duplicates_ID = self.data[i].index[\
-                            self.data[i].index.duplicated()].unique()
-            for j in range(len(duplicates_ID)):
-                duplicates_dat = self.data[i].loc[duplicates_ID[j],:]
-                cv = duplicates_dat.std() / duplicates_dat.mean()
-                cv_interplate.append(cv)
-            cv_interplate = pd.DataFrame(pd.DataFrame(cv_interplate).mean(),
-                            columns=['CV'])
-            remove_met_table = cv_interplate[cv_interplate['CV'] > cutoff]
-            self._print_metabolites_removed(remove_met_table, i)
-            #Remove metabolites in data and pool
-            self._remove_metabolites(remove_met_table, i)
+        if self.platform == 'nmr':
+            print('Cannot compute the CV in the NMR platform')
+        else:
+            print('-----Removing metabolites with CV values greater than ' +
+                  str(cutoff) + '-----')
+            for i in range(len(self.data)):
+                cv_interplate = []
+                duplicates_ID = self.data[i].index[\
+                                self.data[i].index.duplicated()].unique()
+                for j in range(len(duplicates_ID)):
+                    duplicates_dat = self.data[i].loc[duplicates_ID[j],:]
+                    cv = duplicates_dat.std() / duplicates_dat.mean()
+                    cv_interplate.append(cv)
+                cv_interplate = pd.DataFrame(pd.DataFrame(cv_interplate).mean(),
+                                columns=['CV'])
+                remove_met_table = cv_interplate[cv_interplate['CV'] > cutoff]
+                self._print_metabolites_removed(remove_met_table, i)
+                #Remove metabolites in data and pool
+                self._remove_metabolites(remove_met_table, i)
 
     def remove_metabolites_icc(self,
                                cutoff: float = 0.65):
         '''
         Compute the intra-class correlation among duplicates or triplicates
-        for each metabolite and removes metabolites with ICC lower than cutoff
+        for each metabolite and removes metabolites with ICC lower than cutoff.
+        Can only be applied to p180 platform
 
         Parameters
         ----------
@@ -214,43 +296,47 @@ class P180:
         pool: pd.Dataframe
             Dataframe with metabolites removed due to low ICC.
         '''
-        print('-----Removing metabolites with ICC values lower than ' +
-              str(cutoff) + '-----')
-        for i in range(len(self.data)):
-            duplicates_ID  = self.data[i].index[\
-                             self.data[i].index.duplicated()].unique()
-            duplicates_dat = self.data[i].loc[duplicates_ID]
-            
-            raters = []
-            for j in duplicates_ID:
-                n_duplicates = len(duplicates_dat.loc[j])
-                for k in range(n_duplicates):
-                    raters.append(k+1)
-            
-            iccs = []
-            for met in duplicates_dat.columns:
-                icc_dat = pd.DataFrame()
-                icc_dat['raters']  = raters
-                icc_dat['value']   = list(duplicates_dat[met])
-                icc_dat['targets'] = list(duplicates_dat.index)
-                icc_results = pg.intraclass_corr(icc_dat, 
-                                                 targets='targets',
-                                                 raters='raters',
-                                                 ratings='value',
-                                                 nan_policy='omit')
-                iccs.append(icc_results.iloc[2,2])
-            
-            icc_values = pd.DataFrame(index=duplicates_dat.columns)
-            icc_values['ICC'] = iccs
-            remove_met_table  = icc_values[icc_values['ICC'] < cutoff]
-
-            # Print and remove metabolites
-            self._print_metabolites_removed(remove_met_table, i)
-            self._remove_metabolites(remove_met_table, i)
+        if self.platform == 'nmr':
+            print('Cannot compute the CV in the NMR platform')
+        else:
+            print('-----Removing metabolites with ICC values lower than ' +
+                  str(cutoff) + '-----')
+            for i in range(len(self.data)):
+                duplicates_ID  = self.data[i].index[\
+                                 self.data[i].index.duplicated()].unique()
+                duplicates_dat = self.data[i].loc[duplicates_ID]
+                
+                raters = []
+                for j in duplicates_ID:
+                    n_duplicates = len(duplicates_dat.loc[j])
+                    for k in range(n_duplicates):
+                        raters.append(k+1)
+                
+                iccs = []
+                for met in duplicates_dat.columns:
+                    icc_dat = pd.DataFrame()
+                    icc_dat['raters']  = raters
+                    icc_dat['value']   = list(duplicates_dat[met])
+                    icc_dat['targets'] = list(duplicates_dat.index)
+                    icc_results = pg.intraclass_corr(icc_dat, 
+                                                     targets='targets',
+                                                     raters='raters',
+                                                     ratings='value',
+                                                     nan_policy='omit')
+                    iccs.append(icc_results.iloc[2,2])
+                
+                icc_values = pd.DataFrame(index=duplicates_dat.columns)
+                icc_values['ICC'] = iccs
+                remove_met_table  = icc_values[icc_values['ICC'] < cutoff]
+    
+                # Print and remove metabolites
+                self._print_metabolites_removed(remove_met_table, i)
+                self._remove_metabolites(remove_met_table, i)
 
     def harmonize_metabolites(self):
         '''
-        Remove metabolites that have been removed in the other cohort
+        Remove metabolites that have been removed in the other cohort.
+        Can only be applied to p180 platform
 
         Returns
         ----------
@@ -258,27 +344,31 @@ class P180:
             Dataframe with the same metabolites kept across cohorts,
             for the same type
         '''
-        print('-----Harmonizing metabolites-----')
-        indices = [[0,2],[1,3]]
-        for i in indices:
-            mets1 = self.data[i[0]].columns
-            mets2 = self.data[i[1]].columns
-            mets  = [mets1, mets2]
-            overlap_mets = mets1.intersection(mets2)
-            for l in range(2):
-                remove_mets = mets[l][~mets[l].isin(overlap_mets)]
-                print('We will remove ' +
-                      str(len(remove_mets)) + 
-                      ' metabolites in ' + 
-                      self.cohort[i[l]] + ' ' + 
-                      self.type[i[l]] + '\n' ) 
-                self.data[i[l]].drop(remove_mets,
-                                     axis=1,
-                                     inplace=True)
+        if self.platform == 'nmr':
+            print('Cannot compute the CV in the NMR platform')
+        else:
+            print('-----Harmonizing metabolites-----')
+            indices = [[0,2],[1,3]]
+            for i in indices:
+                mets1 = self.data[i[0]].columns
+                mets2 = self.data[i[1]].columns
+                mets  = [mets1, mets2]
+                overlap_mets = mets1.intersection(mets2)
+                for l in range(2):
+                    remove_mets = mets[l][~mets[l].isin(overlap_mets)]
+                    print('We will remove ' +
+                          str(len(remove_mets)) + 
+                          ' metabolites in ' + 
+                          self.cohort[i[l]] + ' ' + 
+                          self.type[i[l]] + '\n' ) 
+                    self.data[i[l]].drop(remove_mets,
+                                         axis=1,
+                                         inplace=True)
 
     def impute_metabolites(self):
         '''
-        Impute NAs by using 0.5 * LOD score
+        Impute NAs by using 0.5 * LOD score in the p180 platform,
+        or by 0 in the nmr platform
 
         Returns
         ----------
@@ -286,45 +376,55 @@ class P180:
             data with metabolites imputed
         '''
         print('-----Imputing metabolites-----')
-        for i in range(len(self.data)):
-            mets_to_impute = self.data[i].\
-                             columns[self.data[i].isna().any()]
-            print('We will impute ' +
-                  str(len(mets_to_impute)) +
-                  ' metabolites in ' +
-                  self.cohort[i] + ' ' + 
-                  self.type[i] + '\n')
-            for j in mets_to_impute:
-                list_of_rows = self.data[i].loc[\
-                               self.data[i][j].isna()].index
-                for m in list_of_rows:
-                    barcode = pd.Series(self.data_meta[i].\
-                                        loc[m,'Plate.Bar.Code'])
-                    if barcode.size > 1:
-                        vals = []
-                        for bars in barcode:
-                            vals.append(self.lod[i].loc[\
-                                 self.lod[i]['Plate.Bar.Code'] == bars, j])
-                        self.data[i].at[m, j] = np.mean(vals) * 0.5
-                    elif barcode.size == 1:
-                        if barcode.isin(self.lod[i]['Plate.Bar.Code']).all():
-                            self.data[i].at[m, j] = self.lod[i].loc[\
-                                self.lod[i]['Plate.Bar.Code'].\
-                                    isin(barcode), j] * 0.5
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                mets_to_impute = self.data[i].\
+                                 columns[self.data[i].isna().any()]
+                print('We will impute ' +
+                      str(len(mets_to_impute)) +
+                      ' metabolites in ' +
+                      self.cohort[i] + ' ' + 
+                      self.type[i] + '\n')
+                for j in mets_to_impute:
+                    list_of_rows = self.data[i].loc[\
+                                   self.data[i][j].isna()].index
+                    for m in list_of_rows:
+                        barcode = pd.Series(self.data_meta[i].\
+                                            loc[m,'Plate.Bar.Code'])
+                        if barcode.size > 1:
+                            vals = []
+                            for bars in barcode:
+                                vals.append(self.lod[i].loc[\
+                                     self.lod[i]['Plate.Bar.Code'] == bars, j])
+                            self.data[i].at[m, j] = np.mean(vals) * 0.5
+                        elif barcode.size == 1:
+                            if barcode.isin(self.lod[i]['Plate.Bar.Code']).all():
+                                self.data[i].at[m, j] = self.lod[i].loc[\
+                                    self.lod[i]['Plate.Bar.Code'].\
+                                        isin(barcode), j] * 0.5
+                            else:
+                                print('The barcode ' +
+                                      str(barcode) + 
+                                      ' is not in the LOD database for ' +
+                                      self.cohort[i] + ' ' + 
+                                      self.type[i])
                         else:
-                            print('The barcode ' +
-                                  str(barcode) + 
-                                  ' is not in the LOD database for ' +
-                                  self.cohort[i] + ' ' + 
-                                  self.type[i])
-                    else:
-                        print('There is something weird here')
+                            print('There is something weird here')
+        elif self.platform == 'nmr':
+            mets_to_impute = self.data.\
+                             columns[self.data.isna().any()]
+            print('We will impute ' +
+                  str(len(mets_to_impute)) + 
+                  ' metabolites in the nmr platform\n')
+            self.data[self.data.isna()] = 0
 
     def transform_metabolites_log2(self,
                                    qtpad=None):
         '''
-        Transform metabolites concentration values to log2 values.
-        Optionally stratify by sex using the qtpad dataset
+        Transform metabolite concentration values to log2 values.
+        Optionally stratify by sex using the qtpad dataset.
+        Add a constant of 1 before log transformation in the nmr
+        platform.
 
         Parameters
         ----------
@@ -339,9 +439,24 @@ class P180:
         '''
         print('-----Log2 transform-----\n')
         if qtpad is not None:
-            for i in range(len(self.data)):
+            if self.platform == 'p180':
+                for i in range(len(self.data)):
+                    dat = pd.merge(qtpad.data['PTGENDER'],
+                                   self.data[i],
+                                   on='RID')
+                    males_bool   = dat['PTGENDER'] == 'Male'
+                    females_bool = dat['PTGENDER'] == 'Female'
+                    males_dat    = np.log2(dat.drop(['PTGENDER'],
+                                           axis=1)[males_bool])
+                    females_dat  = np.log2(dat.drop(['PTGENDER'],
+                                           axis=1)[females_bool])
+                    final_dat    = pd.concat([females_dat,
+                                              males_dat])
+                    self.data[i] = final_dat
+            elif self.platform == 'nmr':
+                metabolites = self.data + 1
                 dat = pd.merge(qtpad.data['PTGENDER'],
-                               self.data[i],
+                               metabolites,
                                on='RID')
                 males_bool   = dat['PTGENDER'] == 'Male'
                 females_bool = dat['PTGENDER'] == 'Female'
@@ -351,10 +466,13 @@ class P180:
                                        axis=1)[females_bool])
                 final_dat    = pd.concat([females_dat,
                                           males_dat])
-                self.data[i] = final_dat
+                self.data    = final_dat
         else:
-            for i in range(len(self.data)):
-                self.data[i] = np.log2(self.data[i])
+            if self.platform == 'p180':
+                for i in range(len(self.data)):
+                    self.data[i] = np.log2(self.data[i])
+            elif self.platform == 'nmr':
+                self.data = np.log2(self.data + 1)
 
     def replace_three_std(self):
         '''
@@ -403,16 +521,24 @@ class P180:
         index: int
             The index value to access the correct dataset analyzed
         '''
+        if self.platform == 'p180':
+            suffix = self.cohort[index] + \
+                     ' ' + \
+                     self.type[index]
+        elif self.platform == 'nmr':
+            suffix = self.platform.upper() + \
+                     ' platform'
+
         if len(remove_met_table) == 0:
             print('None of the metabolites were dropped for '+
-                  self.cohort[index] + ' ' +
-                  self.type[index] + '\n')
+                  suffix + 
+                  '\n')
         else:
             print('We will remove the following ' +
                   str(len(remove_met_table)) + 
                   ' metabolites for ' + 
-                  self.cohort[index] + ' ' +
-                  self.type[index] + ':')
+                  suffix + 
+                  ':')
             print(remove_met_table)
             print('')
 
@@ -425,7 +551,7 @@ class P180:
    
         Parameters
         ----------
-        remove_met: Dataframe
+        remove_met_table: pd.DataFrame
             Dataframe with metabolites names and either missing, CV or ICC
             values
         index: int
@@ -433,13 +559,22 @@ class P180:
 
         Returns
         ----------
-        data: pd.Dataframe
+        data: pd.DataFrame
             Dataframe with metabolites removed.
-        pool: pd.Dataframe
+        pool: pd.DataFrame
             Dataframe with metabolites removed.
         '''
-        self.data[index].drop(remove_met_table.index, axis=1, inplace=True)
-        self.pool[index].drop(remove_met_table.index, axis=1, inplace=True)
+        if self.platform == 'p180':
+            self.data[index].drop(remove_met_table.index,
+                                  axis=1,
+                                  inplace=True)
+            self.pool[index].drop(remove_met_table.index,
+                                  axis=1,
+                                  inplace=True)
+        elif self.platform == 'nmr':
+            self.data.drop(remove_met_table.index,
+                           axis=1,
+                           inplace=True)
 
     def remove_missing_participants(self,
                                     cutoff: float = 0.4):
@@ -458,15 +593,25 @@ class P180:
         '''
         print('-----Removing participants with missing data greater than ' +
               str(cutoff) + '-----')
-        for i in range(len(self.data)):
-            total_part  = self.data[i].shape[1]
-            remove_part = self.data[i].isna().sum(axis=1) / total_part > cutoff
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                total_part  = self.data[i].shape[1]
+                remove_part = self.data[i].isna().\
+                                   sum(axis=1) / total_part > cutoff
+                print('We will remove ' +
+                      str(sum(remove_part)) + 
+                      ' participants for ' + 
+                      self.cohort[i] + ' ' +
+                      self.type[i] + '\n')
+                self.data[i]      = self.data[i][~remove_part]
+        elif self.platform == 'nmr':
+            total_part  = self.data.shape[1]
+            remove_part = self.data.isna().\
+                               sum(axis=1) / total_part > cutoff
             print('We will remove ' +
                   str(sum(remove_part)) + 
-                  ' participants for ' + 
-                  self.cohort[i] + ' ' +
-                  self.type[i] + '\n')
-            self.data[i]      = self.data[i][~remove_part]
+                  ' participants for the nmr platform\n')
+            self.data = self.data[~remove_part]
 
     def remove_non_fasters(self):
         '''
@@ -479,15 +624,23 @@ class P180:
         '''
         print('-----Removing non-fasting participants-----')
         fasting_participants = self.fasting[self.fasting == 1].index
-        for i in range(len(self.data)):
-            keep_participants = self.data[i].index.isin(\
-                                fasting_participants)
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                keep_participants = self.data[i].index.isin(\
+                                    fasting_participants)
+                print('We will remove '+
+                      str(sum(~keep_participants))+
+                      ' participants in '+
+                      str(self.cohort[i]) + ' ' +
+                      str(self.type[i]) + '\n')
+                self.data[i]      = self.data[i].loc[keep_participants]
+        elif self.platform == 'nmr':
+            keep_participants = self.data.index.isin(\
+                                    fasting_participants)
             print('We will remove '+
                   str(sum(~keep_participants))+
-                  ' participants in '+
-                  str(self.cohort[i]) + ' ' +
-                  str(self.type[i]) + '\n')
-            self.data[i]      = self.data[i].loc[keep_participants]
+                  ' participants in the nmr platform\n')
+            self.data = self.data.loc[keep_participants]
 
     def remove_multivariate_outliers(self):
         '''
@@ -553,25 +706,37 @@ class P180:
 
         Returns
         ----------
-        data: pd.Dataframe
+        data: pd.DataFrame
             Dataframe with biological replicates averaged
         '''
         print('-----Consolidating replicates-----')
-        for i in range(len(self.data)):
-            duplicates_ID  = self.data[i].index[\
-                             self.data[i].index.duplicated()].unique()
-            print('There are ' + 
-                  str(len(duplicates_ID))+
-                  ' replicated IDs in ' +
-                  self.cohort[i] + ' ' + 
-                  self.type[i] + '\n')
-            for j in duplicates_ID:
-                consolidated = list(self.data[i].loc[j].mean())
-                self.data[i].drop(j,
-                                  axis='index',
-                                  inplace=True)
-                self.data[i].loc[j] = consolidated
-            self.data[i].sort_index(inplace=True)
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                duplicates_ID  = self.data[i].index[\
+                                 self.data[i].index.duplicated()].unique()
+                print('There are ' + 
+                      str(len(duplicates_ID))+
+                      ' replicated IDs in ' +
+                      self.cohort[i] + ' ' + 
+                      self.type[i] + '\n')
+                for j in duplicates_ID:
+                    consolidated = list(self.data[i].loc[j].mean())
+                    self.data[i].drop(j,
+                                      axis='index',
+                                      inplace=True)
+                    self.data[i].loc[j] = consolidated
+                self.data[i].sort_index(inplace=True)
+        elif self.platform == 'nmr':
+            duplicated_IDs = self.data.index[\
+                             self.data.index.duplicated()].\
+                                  unique()
+            for j in duplicated_IDs:
+                consolidated = list(self.data.loc[j].mean())
+                self.data.drop(j,
+                               axis='index',
+                               inplace=True)
+                self.data.loc[j] = consolidated
+            self.data.sort_index(inplace=True)
     
     def compute_cross_plate_correction(self):
         '''
@@ -636,16 +801,22 @@ class P180:
         '''
         Save cleaned and QCed files to a csv
         '''
-        print('-----Saving p180 file to .csv-----')
+        print('-----Saving ' +
+              self.platform +
+              ' file to .csv-----')
         respath = '../results/'
-        dat1 = pd.concat([self.data[0],
-                          self.data[1]],
-                          axis=1)
-        dat2 = pd.concat([self.data[2],
-                          self.data[3]],
-                          axis=1)
-        final_dat = pd.concat([dat1, dat2])
-        name = 'p180_cleaned.csv'
+        if self.platform == 'p180':
+            dat1 = pd.concat([self.data[0],
+                              self.data[1]],
+                              axis=1)
+            dat2 = pd.concat([self.data[2],
+                              self.data[3]],
+                              axis=1)
+            final_dat = pd.concat([dat1, dat2])
+            name = 'p180_cleaned.csv'
+        elif self.platform == 'nmr':
+            final_dat = self.data
+            name = 'nmr_cleaned.csv'
         final_dat.to_csv(respath + name)
 
 class QT_pad:
@@ -722,106 +893,6 @@ class QT_pad:
                                 final_dat,
                                 on='RID')
         self.data = return_dat
-
-class NMR:
-    '''
-    Nightingale NMR raw data class 
-    '''
-    def __init__(self):
-        '''
-        Initiate the class
-
-        Attributes
-        ----------
-        metabolites: pd.Dataframe
-            metabolomic concentration data
-        qc_tags: pd.Dataframe
-            quality control tags
-        '''
-        nmr_path = '../data/ADNINIGHTINGALE2.csv'
-        dat = pd.read_csv(nmr_path,
-                          na_values='TAG').\
-                 set_index(['RID','VISCODE2'])
-        dat.drop(['VISCODE',
-                  'EXAMDATE',
-                  'SAMPLEID',
-                  'GLOBAL.SPEC.ID',
-                  'update_stamp'],
-                 axis=1,
-                 inplace=True)
-        qc_tag_names = ['EDTA_PLASMA',
-                        'CITRATE_PLASMA',
-                        'LOW_ETHANOL',
-                        'MEDIUM_ETHANOL',
-                        'HIGH_ETHANOL',
-                        'ISOPROPYL_ALCOHOL',
-                        'N_METHYL_2_PYRROLIDONE',
-                        'POLYSACCHARIDES',
-                        'AMINOCAPROIC_ACID',
-                        'LOW_GLUCOSE',
-                        'HIGH_LACTATE',
-                        'HIGH_PYRUVATE',
-                        'LOW_GLUTAMINE_OR_HIGH_GLUTAMATE',
-                        'GLUCONOLACTONE',
-                        'LOW_PROTEIN',
-                        'UNEXPECTED_AMINO_ACID_SIGNALS',
-                        'UNIDENTIFIED_MACROMOLECULES',
-                        'UNIDENTIFIED_SMALL_MOLECULE_A',
-                        'UNIDENTIFIED_SMALL_MOLECULE_B',
-                        'UNIDENTIFIED_SMALL_MOLECULE_C',
-                        'BELOW_LIMIT_OF_QUANTIFICATION']
-        qc_tags = dat.loc[:,qc_tag_names]
-        
-        # Remove qc tags columns that have only 0
-        remove_qc_cols = qc_tags.columns[qc_tags.sum() == 0]
-        qc_tags.drop(remove_qc_cols,
-                     axis=1,
-                     inplace=True)
-
-        dat.drop(qc_tag_names,
-                 axis=1,
-                 inplace=True)
-
-        dat = _keep_baseline(dat)
-        qc_tags = _keep_baseline(qc_tags)
-
-        self.metabolites = dat
-        self.qc_tags = qc_tags
-    
-    def average_replicates(self):
-        '''
-        Generate averages of replicated metabolomic measurements
-
-        Returns
-        ----------
-        metabolites: pd.Dataframe
-            metabolite concentration values with averaged replicates
-        '''
-        print('-----Averaging replicates-----\n')
-        duplicated_IDs = self.metabolites.index[\
-                              self.metabolites.index.duplicated()].\
-                                  unique()
-
-        for i in duplicated_IDs:
-            ind = pd.MultiIndex.from_tuples([i],
-                                    names=['RID',
-                                           'VISCODE2'])
-            averaged = pd.DataFrame(self.metabolites.loc[i,:].mean()).T
-            averaged = averaged.set_index(ind)
-            self.metabolites.drop(i[0],
-                                  axis='index',
-                                  inplace=True)
-            self.metabolites.append(averaged)
-        self.metabolites.sort_index(inplace=True)
-    
-    def save_files(self):
-        '''
-        Save NMR data to csv 
-        '''
-        print('-----Saving NMR data to .csv-----\n')
-        respath = '../results/'
-        name = 'nmr_cleaned.csv'
-        self.metabolites.to_csv(respath + name)
 
 class Meds:
     '''
@@ -952,3 +1023,24 @@ def _keep_baseline(data):
     baseline_data = data.loc[idx[:, 'bl'], :]
 
     return(baseline_data)
+
+def _estimate_delete_missingness(data: pd.DataFrame,
+                                 cutoff: float = 0.2):
+    '''
+    Calculate missingness per column and deletes the corresponding
+    columns
+    Parameters
+    ----------
+    data: pd.DataFrame
+        dataframe with metabolite concentration values
+    cutoff: float
+        Missing data removal cutoff
+    '''
+    total_met = len(data)
+    remove_met_table = pd.DataFrame(\
+                       data.isna().sum(axis=0) / total_met,
+                       columns=['missing'])
+    remove_met_bool  = data.isna().sum(axis=0) / total_met \
+                       > cutoff
+    remove_met_table = remove_met_table[remove_met_bool]
+    return(remove_met_table)
