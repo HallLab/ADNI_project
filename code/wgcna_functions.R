@@ -470,7 +470,7 @@ compute_wgcna <- function(metabolites,
      if (class(metabolites) == "list") {
         rid <- metabolites[[1]]$RID
      } else {
-        rid <- data$RID
+        rid <- metabolites$RID
      }
 
      wgcna <- list("TOM" = tom,
@@ -511,16 +511,24 @@ save_wgcna <- function(wgcna,
      # suffix: str to add to filenames
      #
 
-     me_filename <- paste0("../results/eigenmetabolites",
+     me_filename <- paste0("../results/eigenmetabolites_",
                            suffix,
                            ".csv")
-     data <- paste(wgcna[[4]],
-                  wgcna[[5]])
+
+     if (class(wgcna$eigenmetabolites) == "data.frame") {
+          eigenmetabolites <- wgcna$eigenmetabolites
+     } else if (class(wgcna$eigenmetabolites) == "list") {
+          eigenmetabolites <- wgcna$eigenmetabolites[[1]]$data
+     }
+
+     data <- cbind(wgcna$RID,
+                   eigenmetabolites)
+     colnames(data)[1] <- "RID"
      write.csv(data,
                file = me_filename,
                row.names = FALSE)
 
-     colors_name <- paste0("../results/module_colors",
+     colors_name <- paste0("../results/module_colors_",
                            suffix,
                            ".csv")
      write.table(wgcna[[3]],
