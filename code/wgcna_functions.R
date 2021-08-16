@@ -59,12 +59,18 @@ stratify_by_sex <- function(metabolite_data,
      #
 
      #Split males and females
+     n_cols <- ncol(metabolite_data)
      metabolites_males <- merge(metabolite_data, qtpad_data) %>%
-                         subset(PTGENDER == "Male") %>%
-                         select(-PTGENDER)
+                          subset(PTGENDER == "Male") %>%
+                          select(-PTGENDER)
+     metabolites_males[, 2:n_cols] <- metabolites_males[, 2:n_cols] %>%
+                                      scale()
+
      metabolites_females <- merge(metabolite_data, qtpad_data) %>%
-                           subset(PTGENDER == "Female") %>%
-                           select(-PTGENDER)
+                            subset(PTGENDER == "Female") %>%
+                            select(-PTGENDER)
+     metabolites_females[, 2:n_cols] <- metabolites_females[, 2:n_cols] %>%
+                                        scale()
 
      stratified_metabolites <- list("females" = metabolites_females,
                                     "males" = metabolites_males)
@@ -81,7 +87,7 @@ compare_modules <- function(stratified_metabolites,
      # Parameters
      # ----------
      # stratified_metabolites: list of dataframe stratified by sex
-     # soft_power: int with the sof tpower
+     # soft_power: int with the soft power
      # plotname: str with name of plot
      #
      # Returns
@@ -147,7 +153,7 @@ compare_modules <- function(stratified_metabolites,
      mp <- modulePreservation(multi_expr,
                               multi_color,
                               referenceNetworks = c(1, 2),
-                              nPermutations = 100,
+                              nPermutations = 500,
                               randomSeed = 1,
                               verbose = 3)
      ref <- 1
@@ -312,8 +318,8 @@ choose_sf_power <- function(metabolites,
 }
 
 compute_wgcna <- function(metabolites,
-                          plotname="wgcna_clustering_p180",
-                          plot_modules="wgcna_clustering_modules_p180",
+                          plotname="wgcna_dendrogram_p180",
+                          plot_modules="wgcna_module_tree_p180",
                           min_module_size=5,
                           soft_power=6) {
      # Compute WGCNA or consensus WGCNA depending on input
@@ -324,8 +330,8 @@ compute_wgcna <- function(metabolites,
      # ----------
      # metabolites: dataframe with metabolite concentration
      #              values stratified by sex or not
-     # plotname: str with name of the clutering plot
-     # plot_modules: str with the name of clustering of modules
+     # plotname: str with name of the dendrogram plot
+     # plot_modules: str with the name of the module tree
      # minModuleSize: int with minimun size of module
      # softPower: int with sof power
      #
@@ -434,7 +440,6 @@ compute_wgcna <- function(metabolites,
      final_colors <- merge$colors
      # Eigengenes of the new merged modules:
      final_mes <- merge$newMEs
-     print(table(final_colors))
      #### PLOTS
      if (!is.null(plotname)) {
           # Plot dendrogram with initial and final modules
