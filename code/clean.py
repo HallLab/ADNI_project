@@ -739,26 +739,22 @@ class Metabolites:
 
         Parameters
         ----------
-        meds: Meds
+        meds: pd.DataFrame
+            medication dataframe
         '''
         print('-----Replacing values with residuals-----\n')
         simplefilter(action='ignore', 
                      category=pd.errors.PerformanceWarning)
-        for i in range(len(self.data)):
-            for col in self.data[i].columns:
-                regr = linear_model.LinearRegression()
-                new_dat = pd.merge(self.data[i][col],
-                                   meds.data,
-                                   left_on='RID',
-                                   right_on='RID')
-
-                Y = new_dat[col]
-                X = new_dat.loc[:, new_dat.columns != col]
-                regr.fit(X, Y)
-                predicted = regr.predict(X)
-                residuals = Y - predicted
-                self.data[i][col] = residuals
-        
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                residuals = _get_residuals(self.data[i],
+                                           meds.data)
+                self.data[i] = residuals
+        elif self.platform == 'nmr':
+            residuals = _get_residuals(self.data,
+                                       meds.data)
+            self.data = residuals
+    
     def save_files(self):
         '''
         Save cleaned and QCed files to a csv
@@ -1006,3 +1002,33 @@ def _estimate_delete_missingness(data: pd.DataFrame,
                        > cutoff
     remove_met_table = remove_met_table[remove_met_bool]
     return(remove_met_table)
+
+def _get_residuals(outcomes,
+                   predictors):
+    '''
+    Get residuals for each column in the outcome dataframe.
+    Both outcomes and predictors need an 'RID' column
+
+    Parameters
+    ----------
+    outcomes: pd.DataFrame
+        dataframe with the outcome variables
+    predictors: pd.DataFrame
+        dataframe with the predictor variables
+    '''
+    residuals = outcomes.copy()
+    for col in outcomes.columns:
+        regr = linear_model.LinearRegression()
+        new_dat = pd.merge(outcomes[col],
+                           predictors,
+                           left_on='RID',
+                           right_on='RID')
+        Y = new_dat[col]
+        X = new_dat.loc[:, new_dat.columns != col]
+
+        regr.fit(X, Y)
+        predicted = regr.predict(X)
+        res = Y - predicted
+        residuals[col] = res
+
+    return(residuals)

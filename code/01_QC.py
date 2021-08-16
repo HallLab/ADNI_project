@@ -28,13 +28,11 @@ nmr.remove_non_fasters()
 #### Data transformation
 p180.impute_metabolites()
 nmr.impute_metabolites()
-p180.transform_metabolites_log2(qtpad)
-nmr.transform_metabolites_log2(qtpad)
+p180.transform_metabolites_log2()
+nmr.transform_metabolites_log2()
 
-p180.data = clean.zscore_normalize(p180.data, 
-                                   qtpad)
-nmr.data  = clean.zscore_normalize(nmr.data, 
-                                   qtpad)
+p180.data = clean.zscore_normalize(p180.data)
+nmr.data  = clean.zscore_normalize(nmr.data)
 p180.replace_three_std()
 p180.remove_multivariate_outliers()
 p180.harmonize_participants()
@@ -43,6 +41,7 @@ p180.harmonize_participants()
 meds = clean.Meds()
 meds.transform_to_binary()
 p180.residuals_from_meds(meds)
+nmr.residuals_from_meds(meds)
 
 #### Save files
 p180.save_files()
