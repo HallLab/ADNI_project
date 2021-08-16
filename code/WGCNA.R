@@ -15,9 +15,10 @@ stratified_nmr <- stratify_by_sex(nmr, qtpad)
 
 #### 3. CHOOSE THE SOFT-THRESHOLDING POWER
 print("-----Choosing soft-thresholding power-----")
-choose_sf_power(stratified_p180)
+choose_sf_power(stratified_p180,
+                plotname = "wgcna_power_p180_stratified")
 choose_sf_power(stratified_nmr,
-                plotname = "wgcna_power_plot_nmr")
+                plotname = "wgcna_power_nmr_stratified")
 # Based on the analysis we chose a power of 6 for p180,
 # and 12 for nmr
 

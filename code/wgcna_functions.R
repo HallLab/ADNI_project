@@ -1,7 +1,6 @@
+#### 0. SETTINGS AND LIBRARIES ####
 library(WGCNA)
 library(dplyr)
-
-#### 0.5 PARALLEL PROCESSING ####
 enableWGCNAThreads()
 
 #### 1. FUNCTIONS ####
@@ -55,7 +54,7 @@ stratify_by_sex <- function(metabolite_data,
      #
      # Returns
      # ----------
-     # stratified_metabolties: list of dataframes with metabolites stratified
+     # stratified_metabolites: list of dataframes with metabolites stratified
      #                         females first
      #
 
@@ -67,10 +66,10 @@ stratify_by_sex <- function(metabolite_data,
                            subset(PTGENDER == "Female") %>%
                            select(-PTGENDER)
 
-     stratified_metabolties <- list("females" = metabolites_females,
+     stratified_metabolites <- list("females" = metabolites_females,
                                     "males" = metabolites_males)
 
-     return(stratified_metabolties)
+     return(stratified_metabolites)
 }
 
 compare_modules <- function(stratified_metabolites,
@@ -163,93 +162,153 @@ compare_modules <- function(stratified_metabolites,
      return(mp)
 }
 
-choose_sf_power <- function(stratified_metabolites,
-                            plotname="wgcna_power_plot_p180") {
+choose_sf_power <- function(metabolites,
+                            plotname="wgcna_power_p180",
+                            stratified=NULL) {
      # Go through the process of selecting a set of powers, and
      # plot the results
      #
      # Parameters
      # ----------
-     # stratified_metabolites: dataframe with the metabolites
-     #                         stratified by sex
+     # metabolites: dataframe with metabolite concentration
+     #              values stratified by sex or not
      # plotname: str with the name of the plots
+     # stratified: whether the metabolite input is stratified or not
+     #             (the function will try to guess, use it only if guessing
+     #             is not correct)
      #
 
-     n_sets <- length(stratified_metabolites)
+     if (class(metabolites) == "list") {
+          stratified <- TRUE
+     } else if (class(metabolites) == "data.frame") {
+          stratified <- FALSE
+     } else {
+          print("The class of metabolites is not correct")
+          stop()
+     }
+
      powers <- c(c(1:10),
                  seq(from = 12,
                      to = 20,
                      by = 2))
-     power_tables <- vector(mode = "list",
-                            length = n_sets)
 
-     for (i in 1:n_sets) {
-          data <- stratified_metabolites[[i]] %>%
+     get_power_table <- function(data,
+                                 powers) {
+          data <- data %>%
                   select(-RID)
           sft <- pickSoftThreshold(data,
                                    powerVector = powers,
                                    verbose = 5)
-          power_tables[[i]] <- sft[[2]]
+          power_table <- sft[[2]]
+          return(power_table)
      }
 
-     # Plot the results
-     labels <- c("females",
-                 "males")
-     colors <- c("black",
-                 "red")
-     cex1 <- 0.9
-     filename <- paste0("../results/plots/",
-                        plotname,
-                        ".pdf")
-     pdf(file = filename)
-     # Scale-free topology fit index and soft-thresholding power
-     plot(power_tables[[2]][, 1],
-          -sign(power_tables[[2]][, 3]) * power_tables[[2]][, 2],
-          xlab = "Soft Threshold (power)",
-          ylab = "Scale Free Topology Model Fit,signed R^2",
-          type = "n",
-          main = paste("Scale independence"))
-     # Females
-     text(power_tables[[1]][, 1],
-          -sign(power_tables[[1]][, 3]) * power_tables[[1]][, 2],
-          labels = powers,
-          cex = cex1,
-          col = colors[1])
-     # Males
-     text(power_tables[[2]][, 1],
-          -sign(power_tables[[2]][, 3]) * power_tables[[2]][, 2],
-          labels = powers,
-          cex = cex1,
-          col = colors[2])
-     legend("bottomright",
-            legend = labels,
-            col = colors,
-            pch = 20)
+     plot_sf_power <- function(power_table,
+                               filename,
+                               powers) {
+          cex1 <- 0.9
+          labels <- c("females",
+                      "males")
+          colors <- c("red",
+                      "black")
 
-     # Mean connectivity as a function of the soft-thresholding power
-     plot(power_tables[[2]][, 1],
-          power_tables[[2]][, 5],
-          xlab = "Soft Threshold (power)",
-          ylab = "Mean Connectivity",
-          type = "n",
-          main = paste("Mean connectivity"))
-     # Females
-     text(power_tables[[1]][, 1],
-          power_tables[[1]][, 5],
-          labels = powers,
-          cex = cex1,
-          col = colors[1])
-     # Males
-     text(power_tables[[2]][, 1],
-          power_tables[[2]][, 5],
-          labels = powers,
-          cex = cex1,
-          col = colors[2])
-     legend("topright",
-            legend = labels,
-            col = colors,
-            pch = 20)
-     dev.off()
+          if (class(power_table) == "list") {
+               x <- power_table[[2]][, 1]
+               y <- -sign(power_table[[1]][, 3]) *
+                          power_table[[1]][, 2]
+               y_males <- -sign(power_table[[2]][, 3]) *
+                                power_table[[2]][, 2]
+
+          } else if (class(power_table) == "data.frame") {
+               x <- power_table[, 1]
+               y <- -sign(power_table[, 3]) *
+                          power_table[, 2]
+          }
+
+          pdf(file = filename)
+          plot(x,
+               y,
+               xlab = "Soft Threshold (power)",
+               ylab = "Scale Free Topology Model Fit,signed R^2",
+               type = "n",
+               main = paste("Scale independence"))
+          text(x,
+               y,
+               labels = powers,
+               cex = cex1,
+               col = colors[1])
+          if (class(power_table) == "list") {
+               text(x,
+                    y_males,
+                    labels = powers,
+                    cex = cex1,
+                    col = colors[2])
+               legend("bottomright",
+                      legend = labels,
+                      col = colors,
+                      pch = 20)
+          }
+
+          if (class(power_table) == "list") {
+               y <- power_table[[1]][, 5]
+               y_males <- power_table[[2]][, 5]
+
+          } else if (class(power_table) == "data.frame") {
+               y <- power_table[, 5]
+          }
+
+          plot(x,
+               y,
+               xlab = "Soft Threshold (power)",
+               ylab = "Mean Connectivity",
+               type = "n",
+               main = paste("Mean connectivity"))
+          text(x,
+               y,
+               labels = powers,
+               cex = cex1,
+               col = colors[1])
+          if (class(power_table) == "list") {
+               text(x,
+                    y_males,
+                    labels = powers,
+                    cex = cex1,
+                    col = colors[2])
+               legend("topright",
+                      legend = labels,
+                      col = colors,
+                      pch = 20)
+          }
+          dev.off()
+     }
+
+     if (stratified == TRUE) {
+          n_sets <- length(metabolites)
+          power_tables <- vector(mode = "list",
+                                 length = n_sets)
+          for (i in 1:n_sets) {
+               power_tables[[i]] <- get_power_table(metabolites[[i]],
+                                                    powers)
+          }
+
+          # Plot the results
+          filename <- paste0("../results/plots/",
+                             plotname,
+                             ".pdf")
+          plot_sf_power(power_tables,
+                        filename,
+                        powers)
+     } else if (stratified == FALSE) {
+          power_tables <- get_power_table(metabolites,
+                                          powers)
+          # Plot the results
+          filename <- paste0("../results/plots/",
+                             plotname,
+                             ".pdf")
+          plot_sf_power(power_tables,
+                        filename,
+                        powers)
+     }
 }
 
 compute_wgcna <- function(metabolites,
