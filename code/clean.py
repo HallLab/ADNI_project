@@ -418,19 +418,11 @@ class Metabolites:
                   ' metabolites in the nmr platform\n')
             self.data[self.data.isna()] = 0
 
-    def transform_metabolites_log2(self,
-                                   qtpad=None):
+    def transform_metabolites_log2(self):
         '''
         Transform metabolite concentration values to log2 values.
-        Optionally stratify by sex using the qtpad dataset.
         Add a constant of 1 before log transformation in the nmr
         platform.
-
-        Parameters
-        ----------
-        qtpad: None or QT_pad
-            QT_pad to stratify transformation by sex.
-            Participants not in qtpad are removed.
 
         Returns
         ----------
@@ -438,41 +430,11 @@ class Metabolites:
             data with metabolite values log2 transformed
         '''
         print('-----Log2 transform-----\n')
-        if qtpad is not None:
-            if self.platform == 'p180':
-                for i in range(len(self.data)):
-                    dat = pd.merge(qtpad.data['PTGENDER'],
-                                   self.data[i],
-                                   on='RID')
-                    males_bool   = dat['PTGENDER'] == 'Male'
-                    females_bool = dat['PTGENDER'] == 'Female'
-                    males_dat    = np.log2(dat.drop(['PTGENDER'],
-                                           axis=1)[males_bool])
-                    females_dat  = np.log2(dat.drop(['PTGENDER'],
-                                           axis=1)[females_bool])
-                    final_dat    = pd.concat([females_dat,
-                                              males_dat])
-                    self.data[i] = final_dat
-            elif self.platform == 'nmr':
-                metabolites = self.data + 1
-                dat = pd.merge(qtpad.data['PTGENDER'],
-                               metabolites,
-                               on='RID')
-                males_bool   = dat['PTGENDER'] == 'Male'
-                females_bool = dat['PTGENDER'] == 'Female'
-                males_dat    = np.log2(dat.drop(['PTGENDER'],
-                                       axis=1)[males_bool])
-                females_dat  = np.log2(dat.drop(['PTGENDER'],
-                                       axis=1)[females_bool])
-                final_dat    = pd.concat([females_dat,
-                                          males_dat])
-                self.data    = final_dat
-        else:
-            if self.platform == 'p180':
-                for i in range(len(self.data)):
-                    self.data[i] = np.log2(self.data[i])
-            elif self.platform == 'nmr':
-                self.data = np.log2(self.data + 1)
+        if self.platform == 'p180':
+            for i in range(len(self.data)):
+                self.data[i] = np.log2(self.data[i])
+        elif self.platform == 'nmr':
+            self.data = np.log2(self.data + 1)
 
     def replace_three_std(self):
         '''
