@@ -4,7 +4,6 @@ import clean
 #### Read files
 p180  = clean.Metabolites('p180')
 nmr   = clean.Metabolites('nmr')
-qtpad = clean.QT_pad()
 
 #### Remove metabolites (P180)
 p180.remove_missing_metabolites()

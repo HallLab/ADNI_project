@@ -823,35 +823,6 @@ class QT_pad:
         self.data = self.data.reset_index().set_index('RID')
         self.data = self.data.loc[:,keep_columns]
 
-    def zscore_normalize_phenotypes(self):
-        '''
-        Apply z-score normalization to phenotype values to mean center 
-        and unit variance, by substracting whole column by mean, 
-        and dividing by the standard deviation.
-        Apply sex stratification before normalization
-
-        Returns
-        ----------
-        data: pd.Dataframe
-            data with normalized values
-        '''
-        print('-----Z-score normalizing phenotypes-----\n')
-        dat_phenos   = self.data[self.phenotypes]
-        males_bool   = self.data['PTGENDER'] == 'Male'
-        females_bool = self.data['PTGENDER'] == 'Female'
-        dat_males    = dat_phenos[males_bool].apply(stats.zscore,
-                                                    nan_policy='omit')
-        dat_females  = dat_phenos[females_bool].apply(stats.zscore,
-                                                      nan_policy='omit')
-        final_dat    = pd.concat([dat_females,
-                                  dat_males])
-        extra_cols   = self.data.drop(self.phenotypes,
-                                      axis=1)
-        return_dat   = pd.merge(extra_cols,
-                                final_dat,
-                                on='RID')
-        self.data = return_dat
-
 class Meds:
     '''
     Medication class
@@ -893,34 +864,34 @@ class Meds:
         self.data = self.data.replace(np.nan, 
                                       0)
 
-def zscore_normalize(metabolites,
+def zscore_normalize(data,
                      qtpad=None):
     '''
-    Apply z-score normalization to metabolites values to mean center 
+    Apply z-score normalization to data values to mean center 
     and unit variance, by substracting whole column by mean, 
     and dividing by the standard deviation
     Optionally stratify by sex using the qtpad dataset
 
     Parameters
     ----------
-    metabolites: pd.Dataframe
-        Dataframe with metabolite concentration and RID as index
+    data: pd.Dataframe
+        Dataframe to normalize and RID as index
     qtpad: None or QT_pad
         QT_pad to stratify transformation by sex.
         Participants not in qtpad are removed.
 
     Returns
     ----------
-    normalized_metabolites: pd.Dataframe
-        metabolite concentration values normalized
+    normalized_data: pd.Dataframe
+        data values normalized
     '''
-    print('-----Z-score normalizing metabolites-----\n')
-    normalized_metabolites = []
-    if type(metabolites) == list:
-        for i in range(len(metabolites)):
+    print('-----Z-score normalizing data-----\n')
+    normalized_data = []
+    if type(data) == list:
+        for i in range(len(data)):
             if qtpad is not None:
                 dat = pd.merge(qtpad.data['PTGENDER'],
-                               metabolites[i],
+                               data[i],
                                on='RID')
                 males_bool   = dat['PTGENDER'] == 'Male'
                 females_bool = dat['PTGENDER'] == 'Female'
@@ -935,14 +906,14 @@ def zscore_normalize(metabolites,
                 final_dat    = pd.concat([females_dat,
                                           males_dat])
             else:
-                final_dat = metabolites[i].apply(stats.zscore,
+                final_dat = data[i].apply(stats.zscore,
                                                  nan_policy='omit')
 
-            normalized_metabolites.append(final_dat)
+            normalized_data.append(final_dat)
     else:
         if qtpad is not None:
             dat = pd.merge(qtpad.data['PTGENDER'],
-                           metabolites,
+                           data,
                            on='RID')
             males_bool   = dat['PTGENDER'] == 'Male'
             females_bool = dat['PTGENDER'] == 'Female'
@@ -957,11 +928,11 @@ def zscore_normalize(metabolites,
             final_dat    = pd.concat([females_dat,
                                       males_dat])
         else:
-            final_dat = metabolites.apply(stats.zscore,
-                                             nan_policy='omit')
-        normalized_metabolites = final_dat
+            final_dat = data.apply(stats.zscore,
+                                   nan_policy='omit')
+        normalized_data = final_dat
     
-    return(normalized_metabolites)
+    return(normalized_data)
 
 def _keep_baseline(data):
     '''

@@ -6,10 +6,9 @@ import pandas as pd
 import scipy.stats as stats
 from statsmodels.stats.multitest import multipletests
 
-# Create this class to have either p180 or nmr merged with the imaging data, not both at the same time (they need to be analyzed separately)
-class ADNI_sex:
+class ADNI:
     '''
-    ADNI sex class that integrates imaging data and metabolites 
+    ADNI class that integrates imaging data, metabolites, and covariates
     '''
     def __init__(self,
                  metabolite_type:str='p180',
@@ -34,6 +33,8 @@ class ADNI_sex:
             phenotype names
         covariate_names: list of str
             covariate names
+        modules: bool
+            whether it is modules or not
         filename: str
             name of the metabolite_type and module for future saving
         '''
@@ -44,12 +45,14 @@ class ADNI_sex:
             name = ''     
         self.filename = 'results_' + \
                         metabolite_type + \
-                        name 
+                        name
+        self.modules = modules
+        
+        respath = '../results/'
         
         # Load qt pad data
         qtpad = clean.QT_pad()
         qtpad.keep_phenotypes()
-        qtpad.zscore_normalize_phenotypes()
         phenos = qtpad.data.loc[:,qtpad.phenotypes]
         covs   = qtpad.data.loc[:,qtpad.covariates]
         self.phenotype_names = qtpad.phenotypes
@@ -58,22 +61,25 @@ class ADNI_sex:
         # Load metabolite data
         if metabolite_type == 'p180':
             if modules:
-                # Need to save eigenmet with RID included
-                metabolites = pd.read_csv('../results/eigenmetabolites.csv')
+                file_metabolite = respath +\
+                                  'eigenmetabolites_p180.csv'
             else:
-                metabolites = pd.read_csv('../results/p180_cleaned.csv').\
-                                 set_index('RID')
+                file_metabolite = respath +\
+                                  'p180_cleaned.csv'
         elif metabolite_type == 'nmr':
             if modules:
-                # Need to save eigenmet with RID included
-                metabolites = pd.read_csv('../results/eigenmetabolites.csv')
+                file_metabolite = respath +\
+                                  'eigenmetabolites_nmr.csv'
             else:
-                metabolites = pd.read_csv('../results/nmr_cleaned.csv').\
-                                 set_index('RID')
+                file_metabolite = respath +\
+                                  'nmr_cleaned.csv'
         else:
             print('Please provide an appropriate metabolite_type (p180 or nmr)')
-            metabolites = []        
-        self.metabolite_names = metabolites.columns
+            return()
+        
+        metabolites = pd.read_csv(file_metabolite).\
+                                  set_index('RID')
+        self.metabolite_names = list(metabolites.columns)
 
         # Three way merge
         one_merge = covs.merge(phenos,
@@ -83,38 +89,35 @@ class ADNI_sex:
                                       left_on='RID',
                                       right_on='RID')
 
-        # Change RID to ID because clarite
-        final_merge.index.rename('ID',
-                                 inplace=True)
         self.data = final_merge         
 
-    def zscore_normalize_eigenmetabolites(self):
+    def normalize_data(self):
         '''
-        Zscore normalize the eigenmetabolites stratified by sex
+        Zscore normalize the phenotype, metabolites, and covariate data
+        stratified by sex
 
         Returns
         ----------
-        data: list of pd.Dataframe
-            list of data with normalized eigenmetabolites
+        normalized_data: pd.DataFrame
+                         normalized data
         '''
-        if not self.module_colors:
-            print('There are no eigenmetabolites in data')
-        else:
-            for i in range(len(self.data)):
-                self.data[i].loc[:,self.module_colors] = \
-                     self.data[i].loc[:,self.module_colors].\
-                         apply(stats.zscore,
-                               nan_policy='omit')
+        names_to_normalize = self.covariate_names +\
+                             self.phenotype_names +\
+                             self.metabolite_names
+        remove_names = ['PTGENDER',
+                        'APOE4']
+        for name in remove_names:
+            names_to_normalize.remove(name)
 
-    def stratified_association(self,
-                               on_modules:bool=False):
+        data_to_normalize = self.data[names_to_normalize]
+        qtpad = clean.QT_pad()
+        normalized_data = clean.zscore_normalize(data_to_normalize,
+                                                 qtpad)
+        self.data[names_to_normalize] = normalized_data
+
+    def stratified_association(self):
         '''
         Run a stratified association for each phenotype
-
-        Parameters
-        ----------
-        on_modules: bool
-            Whether to run the EWAS using single metabolites or eigenmetabolites
 
         Returns
         ----------
@@ -125,35 +128,44 @@ class ADNI_sex:
         data    = []
         sexes   = ['Female',
                    'Male']
-        if on_modules:
-            if not self.module_colors:
-                print('There are no eigenmetabolites in data')
-            else:
-                # Don't analyze grey module
-                modules = self.module_colors.copy()
-                if 'MEgrey' in modules:
-                    modules.remove('MEgrey')
-                for s in range(len(self.sexes)): #CHANGE this when eigenmetabolite stuff is sorted out
-                    keep_cols = modules + \
-                                self.phenotypes + \
-                                self.covariates
-                    d = self.data[s].loc[:,keep_cols]
-                    data.append(d)
+        if self.modules:
+            # Don't analyze grey module
+            module_names = self.metabolite_names.copy()
+            if 'MEgrey' in module_names:
+                module_names.remove('MEgrey')
+            for s in range(len(sexes)):
+                keep_cols = module_names + \
+                            self.phenotype_names + \
+                            self.covariate_names
+                temp_data = self.data.loc[:,keep_cols]
         else:
-            for s in sexes:
-                bool_sex = self.data['PTGENDER'] == s
-                d = self.data.loc[bool_sex]
-                d.drop('PTGENDER', 
-                       axis=1,
-                       inplace=True)
-                data.append(d)
+            temp_data = self.data
         
+        for s in sexes:
+            bool_sex = temp_data['PTGENDER'] == s
+            d = temp_data.loc[bool_sex]
+            d.drop('PTGENDER', 
+                   axis=1,
+                   inplace=True)
+            data.append(d)
+
+        categorical_vars = 'APOE4'
+    
         for i in range(len(data)):                
             for p in self.phenotype_names:
                 drop_phenos  = [m for m in self.phenotype_names \
                                 if m != p]
                 data_temp = data[i].drop(columns=drop_phenos)
-                clarite.modify.categorize(data_temp)
+                # Change RID to ID because clarite
+                data_temp.index.rename('ID',
+                                       inplace=True)
+                # Categorize data
+                continuous_vars = list(data_temp.columns)
+                continuous_vars.remove(categorical_vars)
+                clarite.modify.make_categorical(data_temp,
+                                                categorical_vars)
+                clarite.modify.make_continuous(data_temp,
+                                               continuous_vars)
                 covs = self.covariate_names.copy()
                 covs.remove('PTGENDER')
                 r = clarite.analyze.ewas(p,
