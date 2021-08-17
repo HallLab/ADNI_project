@@ -1,6 +1,6 @@
 #### WGCNA ANALYSIS ON METABOLOMICS ####
 
-#### 0. LIBRARIES ####
+#### 1. LIBRARIES ####
 source("wgcna_functions.R")
 
 #### 2. DATA ####

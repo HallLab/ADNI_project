@@ -21,9 +21,8 @@ read_metabolite_data <- function(metabolite_type="p180") {
      } else if (metabolite_type == "nmr") {
           metabolite_data <- read.csv("../results/nmr_cleaned.csv")
      } else {
-          print("Metabolite type do not recognized")
+          print("Metabolite type not recognized")
      }
-
      return(metabolite_data)
 }
 
@@ -37,14 +36,15 @@ read_qtpad_data <- function() {
 
      qtpad_data <- read.csv("../data/ADNI_adnimerge_20170629_QT-freeze.csv")
      qtpad_data <- qtpad_data %>%
-                  subset(VISCODE == "bl") %>%
-                  select(c("RID", "PTGENDER"))
+                   subset(VISCODE == "bl") %>%
+                   select(c("RID", "PTGENDER"))
      return(qtpad_data)
 }
 
 stratify_by_sex <- function(metabolite_data,
                             qtpad_data) {
-     # Stratified the metabolite_data by sex based on qtpad_data
+     # Stratifiy the metabolite_data by sex based on qtpad_data.
+     # Normalizes each column after the stratification.
      # Qtpad_data must contain PTGENDER column
      #
      # Parameters
@@ -340,7 +340,7 @@ compute_wgcna <- function(metabolites,
      # wgcna: TOM, tree, colors, eigenmetabolites, and RID
      #
      if (class(metabolites) == "list") {
-        # Generate multiExpr dataset for WGCNA
+          # Generate multiExpr dataset for WGCNA
           n_sets <- length(metabolites)
           multi_expr <- vector(mode = "list",
                                length = n_sets)
