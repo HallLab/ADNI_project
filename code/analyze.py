@@ -245,9 +245,8 @@ class ADNI:
         
             zdiff = t1 / t2
             pval  = 2*stats.norm.cdf(-abs(zdiff))
-            final_dat = pd.DataFrame(zdiff, 
-                                     index=res_temp1.index, 
-                                     columns=['Z'])
+            final_dat = pd.DataFrame(zdiff)
+            final_dat.columns = pd.Index(['Z'])
             final_dat['pvalue'] = pval
             results_diff.append(final_dat)
         self.results_diff = results_diff
@@ -376,8 +375,7 @@ class ADNI:
                                      'difference_arnold'] = 'Sex-specific'
     
     def save_to_csv(self,
-                    savepath:str,
-                    modules:bool=False):
+                    savepath:str):
         '''
         Save file to csv 
 
@@ -406,21 +404,18 @@ class ADNI:
             final_dat['pvalue_total'] = self.results_meta[i]['pvalue']
 
             final_dat['pvalue_diff'] = self.results_diff[i]['pvalue']
+            final_dat['z_diff'] = self.results_diff[i]['Z']
             final_dat['difference_type'] = \
                         self.results_diff[i]['difference_type']
 
             final_dat['difference_arnold'] = \
                         self.results_diff[i]['difference_arnold']
 
-            if modules:
-                name = 'Preliminary_results_' +\
-                        self.phenotypes[i] +\
-                        '_modules.csv'
-            else:
-                name = 'Preliminary_results_' +\
-                        self.phenotypes[i] +\
-                        '.csv'
-            filename = os.path.join(savepath,
+            name = self.filename +\
+                   '_' +\
+                   self.phenotype_names[i] +\
+                   '.csv'
+            fullname = os.path.join(savepath,
                                     name)
-            final_dat.to_csv(filename)
+            final_dat.to_csv(fullname)
  
