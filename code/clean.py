@@ -827,6 +827,13 @@ class QT_pad:
         dat = dat.loc[:,keep_columns]
 
         self.data = dat.dropna(axis=0)
+
+        # Replace diagnosis categories
+        to_replace = {'SMC': 'CN', 
+                      'EMCI': 'MCI',
+                      'LMCI': 'MCI'}
+        self.data[self.diagnosis].replace(to_replace,
+                                          inplace=True)
     
     def PLS_DA(self,
                n_components:int=2):
