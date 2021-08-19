@@ -1,8 +1,12 @@
+import numpy as np
 import pandas as pd
 import pingouin as pg
-import numpy as np
+
 from warnings import simplefilter
 from sklearn import preprocessing, linear_model
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.cross_decomposition import PLSRegression
+
 import scipy.stats as stats
 
 class Metabolites:
@@ -790,16 +794,24 @@ class QT_pad:
         data: pd.Dataframe
             qt-pad data
         phenotypes: list
-            phenotype names
+            phenotype column names
         covariates: list
-            covariate names
+            covariate column names
+        diagnosis: str
+            diagnosis column name
         '''
-        self.phenotypes = ['Hippocampus',
-                           'Entorhinal']
+        self.phenotypes = ['Ventricles',
+                           'Hippocampus',
+                           'WholeBrain',
+                           'Entorhinal',
+                           'Fusiform',
+                           'MidTemp',
+                           'ICV']
         self.covariates = ['AGE',
                            'PTEDUCAT',
                            'APOE4',
                            'PTGENDER']
+        self.diagnosis = 'DX.bl'
         qt_path = '../data/ADNI_adnimerge_20170629_QT-freeze.csv'
 
         dat = pd.read_csv(qt_path).\
@@ -807,21 +819,65 @@ class QT_pad:
 
         dat = _keep_baseline(dat)
 
-        self.data = dat
+        keep_columns = [self.diagnosis] +\
+                        self.covariates +\
+                        self.phenotypes
+                       
+        dat = dat.reset_index().set_index('RID')
+        dat = dat.loc[:,keep_columns]
 
-    def keep_phenotypes(self):
+        self.data = dat.dropna(axis=0)
+    
+    def PLS_DA(self,
+               n_components:int=2):
         '''
-        Keep only the needed phenotypes, the RID,
-        and covariates
+        Run a Partial Least Squares Regression where the
+        outcome is the diagnosis, and the predictors are
+        the phenotypes
+
+        Parameters
+        ----------
+        n_components: int
+            number of components to estimate
 
         Returns
-        data: pd.Dataframe
-            data with the phenotypes, the RID and covariates
+        ---------
+        scores: pd.DataFrame
+            PLS scores
         '''
-        keep_columns = self.phenotypes +\
-                       self.covariates
-        self.data = self.data.reset_index().set_index('RID')
-        self.data = self.data.loc[:,keep_columns]
+        print('-----Running PLS-DA-----')
+        self.data[self.phenotypes] = self.data[self.phenotypes].\
+                                          apply(stats.zscore,
+                                                nan_policy='omit')
+
+        encoder = OneHotEncoder(sparse=False)
+        Y = pd.DataFrame(encoder.fit_transform(self.data[ [self.diagnosis] ]))
+        Y.columns = encoder.get_feature_names([self.diagnosis])
+        
+        X = self.data.reset_index()[self.phenotypes]
+        PLSDA = PLSRegression(n_components = n_components).\
+                              fit(X=X,
+                                  Y=Y)
+        
+        self.scores = pd.DataFrame(PLSDA.x_scores_)
+        self.scores.index = self.data.index
+        self.scores.rename(columns={0:'Component 1',
+                                    1:'Component 2'},
+                           inplace=True)
+
+    def save_PLS(self,
+                 savepath):
+        '''
+        Save scores from PLS into a csv
+
+        Parameters
+        ----------
+        savepath: str
+            path to save the file
+        '''
+        print('-----Saving PLS scores to csv-----')
+        name = 'pheno_pls_components.csv'
+        self.scores.to_csv(savepath + name)
 
 class Meds:
     '''

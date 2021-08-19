@@ -12,7 +12,8 @@ class ADNI:
     '''
     def __init__(self,
                  metabolite_type:str='p180',
-                 modules:bool=False):
+                 modules:bool=False,
+                 phenotypes_pls:bool=False):
         '''
         Initiate the class
         
@@ -22,6 +23,8 @@ class ADNI:
             type of metabolite data to load, either p180 or nmr
         modules: bool
             whether to load wgcna modules or single metabolites
+        phenotypes_pls: bool
+            whether to load the pls scores instead of individuals phenotypes
 
         Attributes
         ----------
@@ -50,14 +53,19 @@ class ADNI:
         
         respath = '../results/'
         
-        # Load qt pad data
+        # Load phenotypes and covariates
         qtpad = clean.QT_pad()
-        qtpad.keep_phenotypes()
-        phenos = qtpad.data.loc[:,qtpad.phenotypes]
         covs   = qtpad.data.loc[:,qtpad.covariates]
-        self.phenotype_names = qtpad.phenotypes
         self.covariate_names = qtpad.covariates
-
+        if phenotypes_pls:
+            phenos = pd.read_csv('../results/pheno_pls_components.csv').\
+                        set_index('RID')
+            self.phenotype_names = ['Component 1',
+                                    'Component 2']
+        else:
+            phenos = qtpad.data.loc[:,qtpad.phenotypes]
+            self.phenotype_names = qtpad.phenotypes
+            
         # Load metabolite data
         if metabolite_type == 'p180':
             if modules:

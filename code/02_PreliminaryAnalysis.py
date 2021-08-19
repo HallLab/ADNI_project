@@ -16,7 +16,8 @@ modules   = [False,
 savepath = '../results'
 for i in range(0,4):
     dat = analyze.ADNI(metabolite_type=platforms[i],
-                       modules=modules[i])
+                       modules=modules[i],
+                       phenotypes_pls=True)
     dat.normalize_data()
     dat.stratified_association()
     dat.save_to_csv(savepath)
