@@ -32,7 +32,7 @@ class Metabolites:
         fasting: pd.DataFrame
             fasting information
 
-        Attributes (p180)
+        Attributes (p180 exclusive)
         ----------
         cohort: list of str
             List of the ADNI cohort (ADNI1 or ADNI2GO)
@@ -54,6 +54,10 @@ class Metabolites:
             print('Select an appropriate metabolomics platform (p180 or nmr)')
         else:
             self.platform = platform
+
+        print('-----Loading the ' +
+              self.platform + 
+              ' metabolomics platform-----')
 
         #### SETTING PATHS AND FILES ####
         data_path = '../data/'
@@ -212,6 +216,21 @@ class Metabolites:
             fast_dat.loc[i] = val
         self.fasting = fast_dat.sort_index()
 
+        #Printing information
+        if self.platform == 'nmr':
+            n_participants = self.data.shape[0]
+            n_metabolites  = self.data.shape[1]
+        elif self.platform == 'p180':
+            n_participants = self.data[0].shape[0] + \
+                             self.data[3].shape[0]
+            n_metabolites  = self.data[0].shape[1] + \
+                             self.data[1].shape[1]
+        print('There are ' + 
+              str(n_participants) +
+              ' participants, and ' +
+              str(n_metabolites) +
+              ' metabolites\n')
+
     def remove_missing_metabolites(self,
                                    cutoff: float = 0.2):
         '''
@@ -232,15 +251,23 @@ class Metabolites:
         print('-----Removing metabolites with missing data greater than ' +
               str(cutoff) + '-----')
         if self.platform == 'p180':
+            metabolite_list = []
             for i in range(len(self.data)):
                 remove_met_table = _estimate_delete_missingness(self.data[i])
                 self._print_metabolites_removed(remove_met_table, i)
                 #Remove metabolites from data and pool
                 self._remove_metabolites(remove_met_table, i)
+                metabolite_list.extend(list(remove_met_table.index))
+            metabolite_list = set(metabolite_list)
+            n_metabolites   = len(metabolite_list)
+            print('There were ' + 
+                  str(n_metabolites) + 
+                  ' metabolites removed in the p180 platform across cohorts\n')
         elif self.platform == 'nmr':
             remove_met_table = _estimate_delete_missingness(self.data)
             self._print_metabolites_removed(remove_met_table)
             self._remove_metabolites(remove_met_table)
+            print('')
 
     def remove_metabolites_cv(self,
                               cutoff: float = 0.2):
@@ -266,6 +293,7 @@ class Metabolites:
         else:
             print('-----Removing metabolites with CV values greater than ' +
                   str(cutoff) + '-----')
+            metabolite_list = []
             for i in range(len(self.data)):
                 cv_interplate = []
                 duplicates_ID = self.data[i].index[\
@@ -277,9 +305,15 @@ class Metabolites:
                 cv_interplate = pd.DataFrame(pd.DataFrame(cv_interplate).mean(),
                                 columns=['CV'])
                 remove_met_table = cv_interplate[cv_interplate['CV'] > cutoff]
+                metabolite_list.extend(list(remove_met_table.index))
                 self._print_metabolites_removed(remove_met_table, i)
                 #Remove metabolites in data and pool
                 self._remove_metabolites(remove_met_table, i)
+            metabolite_list = set(metabolite_list)
+            n_metabolites   = len(metabolite_list)
+            print('There were ' + 
+                  str(n_metabolites) + 
+                  ' metabolites removed in the p180 platform across cohorts\n')
 
     def remove_metabolites_icc(self,
                                cutoff: float = 0.65):
@@ -305,6 +339,7 @@ class Metabolites:
         else:
             print('-----Removing metabolites with ICC values lower than ' +
                   str(cutoff) + '-----')
+            metabolite_list = []
             for i in range(len(self.data)):
                 duplicates_ID  = self.data[i].index[\
                                  self.data[i].index.duplicated()].unique()
@@ -332,10 +367,17 @@ class Metabolites:
                 icc_values = pd.DataFrame(index=duplicates_dat.columns)
                 icc_values['ICC'] = iccs
                 remove_met_table  = icc_values[icc_values['ICC'] < cutoff]
+                metabolite_list.extend(list(remove_met_table.index))
     
                 # Print and remove metabolites
                 self._print_metabolites_removed(remove_met_table, i)
                 self._remove_metabolites(remove_met_table, i)
+
+            metabolite_list = set(metabolite_list)
+            n_metabolites   = len(metabolite_list)
+            print('There were ' + 
+                  str(n_metabolites) + 
+                  ' metabolites removed in the p180 platform across cohorts\n')
 
     def harmonize_metabolites(self):
         '''
@@ -364,10 +406,11 @@ class Metabolites:
                           str(len(remove_mets)) + 
                           ' metabolites in ' + 
                           self.cohort[i[l]] + ' ' + 
-                          self.type[i[l]] + '\n' ) 
+                          self.type[i[l]]) 
                     self.data[i[l]].drop(remove_mets,
                                          axis=1,
                                          inplace=True)
+            print('')
 
     def impute_metabolites(self):
         '''
@@ -388,7 +431,7 @@ class Metabolites:
                       str(len(mets_to_impute)) +
                       ' metabolites in ' +
                       self.cohort[i] + ' ' + 
-                      self.type[i] + '\n')
+                      self.type[i])
                 for j in mets_to_impute:
                     list_of_rows = self.data[i].loc[\
                                    self.data[i][j].isna()].index
@@ -419,8 +462,9 @@ class Metabolites:
                              columns[self.data.isna().any()]
             print('We will impute ' +
                   str(len(mets_to_impute)) + 
-                  ' metabolites in the nmr platform\n')
+                  ' metabolites in the nmr platform')
             self.data[self.data.isna()] = 0
+        print('')
 
     def transform_metabolites_log2(self):
         '''
@@ -470,7 +514,8 @@ class Metabolites:
                   str(count) + 
                   ' values in ' +
                   self.cohort[i] + ' ' + 
-                  self.type[i] + '\n')
+                  self.type[i])
+        print('')
     
     def _print_metabolites_removed(self, 
                                    remove_met_table: pd.DataFrame = None,
@@ -497,8 +542,7 @@ class Metabolites:
 
         if len(remove_met_table) == 0:
             print('None of the metabolites were dropped for '+
-                  suffix + 
-                  '\n')
+                  suffix)
         else:
             print('We will remove the following ' +
                   str(len(remove_met_table)) + 
@@ -506,7 +550,6 @@ class Metabolites:
                   suffix + 
                   ':')
             print(remove_met_table)
-            print('')
 
     def _remove_metabolites(self,
                             remove_met_table: pd.DataFrame = None,
@@ -568,7 +611,7 @@ class Metabolites:
                       str(sum(remove_part)) + 
                       ' participants for ' + 
                       self.cohort[i] + ' ' +
-                      self.type[i] + '\n')
+                      self.type[i])
                 self.data[i]      = self.data[i][~remove_part]
         elif self.platform == 'nmr':
             total_part  = self.data.shape[1]
@@ -576,8 +619,9 @@ class Metabolites:
                                sum(axis=1) / total_part > cutoff
             print('We will remove ' +
                   str(sum(remove_part)) + 
-                  ' participants for the nmr platform\n')
+                  ' participants for the nmr platform')
             self.data = self.data[~remove_part]
+        print('')
 
     def remove_non_fasters(self):
         '''
@@ -598,15 +642,16 @@ class Metabolites:
                       str(sum(~keep_participants))+
                       ' participants in '+
                       str(self.cohort[i]) + ' ' +
-                      str(self.type[i]) + '\n')
+                      str(self.type[i]))
                 self.data[i]      = self.data[i].loc[keep_participants]
         elif self.platform == 'nmr':
             keep_participants = self.data.index.isin(\
                                     fasting_participants)
             print('We will remove '+
                   str(sum(~keep_participants))+
-                  ' participants in the nmr platform\n')
+                  ' participants in the nmr platform')
             self.data = self.data.loc[keep_participants]
+        print('')
 
     def remove_multivariate_outliers(self):
         '''
@@ -619,24 +664,38 @@ class Metabolites:
             data with multivariate outliers removed
         '''
         print('-----Removing multivariate outliers-----')
-        for i in range(len(self.data)):
-            cov_mat = self.data[i].cov()
-            p2      = self.data[i].mean()
+        participant_list = []
+        indices = [[0,1],[2,3]]
+        for i in indices:
+            data = pd.concat([self.data[i[0]],
+                              self.data[i[1]]],
+                              axis=1)
+            cov_mat = data.cov()
+            p2      = data.mean()
             cov_mat_pm1 = np.linalg.matrix_power(cov_mat, -1)
             distances = []
-            for l, val in enumerate(self.data[i].to_numpy()):
+            for l, val in enumerate(data.to_numpy()):
                 p1 = val
                 distance = (p1-p2).T.dot(cov_mat_pm1).dot(p1-p2)
                 distances.append(distance)
             distances = np.array(distances)
-            cutoff    = stats.chi2.ppf(0.99, self.data[i].shape[1])
+            cutoff    = stats.chi2.ppf(0.999, data.shape[1]-1)
             n_to_remove = (distances > cutoff ).sum()
+            participant_list.extend(list(data.\
+                                    index[(distances > cutoff)]))
             print('We will remove ' + 
                   str(n_to_remove) + 
                   ' participants from ' + 
-                  self.cohort[i] + ' ' + 
-                  self.type[i] + '\n')
-            self.data[i]      = self.data[i].loc[~(distances > cutoff)]
+                  self.cohort[i[0]])
+            self.data[i[0]]      = self.data[i[0]].\
+                                        loc[~(distances > cutoff)]
+            self.data[i[1]]      = self.data[i[1]].\
+                                        loc[~(distances > cutoff)]
+        participant_list = set(participant_list)
+        n_participants   = len(participant_list)
+        print('There were ' + 
+              str(n_participants) + 
+              ' that were removed in the p180 platform across cohorts\n')
 
     def harmonize_participants(self):
         '''
@@ -648,7 +707,7 @@ class Metabolites:
             Dataframe with the same participants kept across cohorts,
             for the same type
         '''
-        print('-----Harmonizing participants-----\n')
+        print('-----Harmonizing participants-----')
         indices = [[0,1],[2,3]]
         for i in indices:
             parts1 = self.data[i[0]].index
@@ -661,10 +720,11 @@ class Metabolites:
                       str(len(remove_parts)) + 
                       ' participants in ' + 
                       self.cohort[i[l]] + ' ' + 
-                      self.type[i[l]] + '\n' ) 
+                      self.type[i[l]]) 
                 self.data[i[l]].drop(remove_parts,
                                      axis=0,
                                      inplace=True)
+        print('')
 
     def consolidate_replicates(self):
         '''
@@ -684,7 +744,7 @@ class Metabolites:
                       str(len(duplicates_ID))+
                       ' replicated IDs in ' +
                       self.cohort[i] + ' ' + 
-                      self.type[i] + '\n')
+                      self.type[i])
                 for j in duplicates_ID:
                     consolidated = list(self.data[i].loc[j].mean())
                     self.data[i].drop(j,
@@ -696,6 +756,9 @@ class Metabolites:
             duplicated_IDs = self.data.index[\
                              self.data.index.duplicated()].\
                                   unique()
+            print('There are ' + 
+                  str(len(duplicated_IDs))+
+                  ' replicated IDs in the nmr platform')
             for j in duplicated_IDs:
                 consolidated = list(self.data.loc[j].mean())
                 self.data.drop(j,
@@ -703,6 +766,7 @@ class Metabolites:
                                inplace=True)
                 self.data.loc[j] = consolidated
             self.data.sort_index(inplace=True)
+        print('')
     
     def compute_cross_plate_correction(self):
         '''
@@ -776,9 +840,20 @@ class Metabolites:
                               axis=1)
             final_dat = pd.concat([dat1, dat2])
             name = 'p180_cleaned.csv'
+            n_participants = self.data[0].shape[0] + \
+                             self.data[3].shape[0]
+            n_metabolites  = self.data[0].shape[1] + \
+                             self.data[1].shape[1]
         elif self.platform == 'nmr':
             final_dat = self.data
             name = 'nmr_cleaned.csv'
+            n_participants = self.data.shape[0]
+            n_metabolites  = self.data.shape[1]
+        print('Saving ' +
+              str(n_participants) +
+              ' participants, and ' +
+              str(n_metabolites) +
+              ' metabolites\n')
         final_dat.to_csv(respath + name)
 
 class QT_pad:
@@ -852,7 +927,7 @@ class QT_pad:
         scores: pd.DataFrame
             PLS scores
         '''
-        print('-----Running PLS-DA-----')
+        print('-----Running PLS-DA-----\n')
         self.data[self.phenotypes] = self.data[self.phenotypes].\
                                           apply(stats.zscore,
                                                 nan_policy='omit')
@@ -882,7 +957,7 @@ class QT_pad:
         savepath: str
             path to save the file
         '''
-        print('-----Saving PLS scores to csv-----')
+        print('-----Saving PLS scores to csv-----\n')
         name = 'pheno_pls_components.csv'
         self.scores.to_csv(savepath + name)
 
