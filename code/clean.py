@@ -3,7 +3,7 @@ import pandas as pd
 import pingouin as pg
 
 from warnings import simplefilter
-from sklearn import preprocessing, linear_model
+from sklearn import linear_model
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.cross_decomposition import PLSRegression
 
@@ -93,6 +93,9 @@ class Metabolites:
                 dat = pd.read_csv(data_path + i,
                                   na_values=na_values).\
                          set_index('RID')
+                # Carnosine is misspelled in ADNI2GO UPLC
+                if i == 'ADMCDUKEP180UPLCADNI2GO.csv':
+                    dat = dat.rename(columns={'canosine':'Carnosine'})
                 #Divide between pool and proper samples
                 dat_pool = dat.loc[999999]
                 dat_data = dat.loc[0:99999]
@@ -251,9 +254,12 @@ class Metabolites:
         print('-----Removing metabolites with missing data greater than ' +
               str(cutoff) + '-----')
         if self.platform == 'p180':
+            indices = [[0,2], [1,3]]
             metabolite_list = []
-            for i in range(len(self.data)):
-                remove_met_table = _estimate_delete_missingness(self.data[i])
+            for i in indices:
+                data = pd.concat([self.data[i[0]],
+                                  self.data[i[1]]])
+                remove_met_table = _estimate_delete_missingness(data)
                 self._print_metabolites_removed(remove_met_table, i)
                 #Remove metabolites from data and pool
                 self._remove_metabolites(remove_met_table, i)
@@ -294,12 +300,15 @@ class Metabolites:
             print('-----Removing metabolites with CV values greater than ' +
                   str(cutoff) + '-----')
             metabolite_list = []
-            for i in range(len(self.data)):
+            indices = [[0,2], [1,3]]
+            for i in indices:
                 cv_interplate = []
-                duplicates_ID = self.data[i].index[\
-                                self.data[i].index.duplicated()].unique()
+                data = pd.concat([self.data[i[0]],
+                                  self.data[i[1]]])
+                duplicates_ID = data.index[\
+                                data.index.duplicated()].unique()
                 for j in range(len(duplicates_ID)):
-                    duplicates_dat = self.data[i].loc[duplicates_ID[j],:]
+                    duplicates_dat = data.loc[duplicates_ID[j],:]
                     cv = duplicates_dat.std() / duplicates_dat.mean()
                     cv_interplate.append(cv)
                 cv_interplate = pd.DataFrame(pd.DataFrame(cv_interplate).mean(),
@@ -340,10 +349,13 @@ class Metabolites:
             print('-----Removing metabolites with ICC values lower than ' +
                   str(cutoff) + '-----')
             metabolite_list = []
-            for i in range(len(self.data)):
-                duplicates_ID  = self.data[i].index[\
-                                 self.data[i].index.duplicated()].unique()
-                duplicates_dat = self.data[i].loc[duplicates_ID]
+            indices = [[0,2], [1,3]]
+            for i in indices:
+                data = pd.concat([self.data[i[0]],
+                                  self.data[i[1]]])
+                duplicates_ID  = data.index[\
+                                 data.index.duplicated()].unique()
+                duplicates_dat = data.loc[duplicates_ID]
                 
                 raters = []
                 for j in duplicates_ID:
@@ -469,8 +481,7 @@ class Metabolites:
     def transform_metabolites_log2(self):
         '''
         Transform metabolite concentration values to log2 values.
-        Add a constant of 1 before log transformation in the nmr
-        platform.
+        Add a constant of 1 before log transformation.
 
         Returns
         ----------
@@ -480,9 +491,34 @@ class Metabolites:
         print('-----Log2 transform-----\n')
         if self.platform == 'p180':
             for i in range(len(self.data)):
-                self.data[i] = np.log2(self.data[i])
+                self.data[i] = np.log2(self.data[i] + 1)
         elif self.platform == 'nmr':
             self.data = np.log2(self.data + 1)
+
+    def transform_metabolites_zscore(self):
+        '''
+        Apply zscore normalization on metabolite values.
+        In p180 platform, metabolites are merged across
+        cohorts
+
+        Returns
+        ----------
+        data: pd.DataFrame
+            data values normalized
+        '''
+        print('-----Z-score normalizing data in the ' +
+              self.platform +
+              ' platform-----\n')
+        if self.platform == 'p180':
+            indices = [[0,2], [1,3]]
+            for i in indices:
+                data = pd.concat([self.data[i[0]],
+                                  self.data[i[1]]])
+                data = zscore_normalize(data)
+                for l in i:
+                    self.data[l] = data.loc[self.data[l].index]
+        elif self.platform == 'nmr':
+            self.data = zscore_normalize(self.data)
 
     def replace_three_std(self):
         '''
@@ -519,7 +555,7 @@ class Metabolites:
     
     def _print_metabolites_removed(self, 
                                    remove_met_table: pd.DataFrame = None,
-                                   index: int = None):
+                                   index: int or list = None):
         '''
         Print the how many metabolites will be removed, and the value 
         associated with the decision (either missing, CV, or ICC).
@@ -529,13 +565,16 @@ class Metabolites:
         remove_met: Dataframe
             Dataframe with metabolites names and either missing, CV or ICC
             values
-        index: int
-            The index value to access the correct dataset analyzed
+        index: int or list
+            The index value or values to access the correct dataset analyzed
         '''
         if self.platform == 'p180':
-            suffix = self.cohort[index] + \
-                     ' ' + \
-                     self.type[index]
+            if type(index) == list:
+                suffix = self.type[index[0]]
+            elif type(index) == int:
+                suffix = self.cohort[index] + \
+                         ' ' + \
+                         self.type[index]
         elif self.platform == 'nmr':
             suffix = self.platform.upper() + \
                      ' platform'
@@ -553,7 +592,7 @@ class Metabolites:
 
     def _remove_metabolites(self,
                             remove_met_table: pd.DataFrame = None,
-                            index: int = None):
+                            index: int or list = None):
         '''
         Remove the list of metabolites from remove_met_table indicated 
         in the index
@@ -563,8 +602,8 @@ class Metabolites:
         remove_met_table: pd.DataFrame
             Dataframe with metabolites names and either missing, CV or ICC
             values
-        index: int
-            The index value to access the correct dataset analyzed
+        index: int or list
+            The index value or values to access the correct dataset analyzed
 
         Returns
         ----------
@@ -574,12 +613,21 @@ class Metabolites:
             Dataframe with metabolites removed.
         '''
         if self.platform == 'p180':
-            self.data[index].drop(remove_met_table.index,
-                                  axis=1,
-                                  inplace=True)
-            self.pool[index].drop(remove_met_table.index,
-                                  axis=1,
-                                  inplace=True)
+            if type(index) == list:
+                for i in index:
+                    self.data[i].drop(remove_met_table.index,
+                                      axis=1,
+                                      inplace=True)
+                    self.pool[i].drop(remove_met_table.index,
+                                      axis=1,
+                                      inplace=True)
+            elif type(index) == int:
+                self.data[index].drop(remove_met_table.index,
+                                      axis=1,
+                                      inplace=True)
+                self.pool[index].drop(remove_met_table.index,
+                                      axis=1,
+                                      inplace=True)
         elif self.platform == 'nmr':
             self.data.drop(remove_met_table.index,
                            axis=1,
@@ -603,16 +651,21 @@ class Metabolites:
         print('-----Removing participants with missing data greater than ' +
               str(cutoff) + '-----')
         if self.platform == 'p180':
-            for i in range(len(self.data)):
-                total_part  = self.data[i].shape[1]
-                remove_part = self.data[i].isna().\
+            indices = [[0,1], [2,3]]
+            for i in indices:
+                data = pd.concat([self.data[i[0]],
+                                  self.data[i[1]]],
+                                  axis=1)
+                total_part  = data.shape[1]
+                remove_part = data.isna().\
                                    sum(axis=1) / total_part > cutoff
                 print('We will remove ' +
                       str(sum(remove_part)) + 
                       ' participants for ' + 
-                      self.cohort[i] + ' ' +
-                      self.type[i])
-                self.data[i]      = self.data[i][~remove_part]
+                      self.cohort[i[0]] + 
+                      ' cohort')
+                for l in i:
+                    self.data[l] = self.data[l][~remove_part]
         elif self.platform == 'nmr':
             total_part  = self.data.shape[1]
             remove_part = self.data.isna().\
@@ -1023,7 +1076,6 @@ def zscore_normalize(data,
     normalized_data: pd.Dataframe
         data values normalized
     '''
-    print('-----Z-score normalizing data-----\n')
     normalized_data = []
     if type(data) == list:
         for i in range(len(data)):
@@ -1045,7 +1097,7 @@ def zscore_normalize(data,
                                           males_dat])
             else:
                 final_dat = data[i].apply(stats.zscore,
-                                                 nan_policy='omit')
+                                          nan_policy='omit')
 
             normalized_data.append(final_dat)
     else:
