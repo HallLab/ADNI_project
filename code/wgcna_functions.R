@@ -1,6 +1,7 @@
 #### 0. SETTINGS AND LIBRARIES ####
 library(WGCNA)
 library(dplyr)
+library(CoExpNets)
 enableWGCNAThreads()
 
 #### 1. FUNCTIONS ####
@@ -193,18 +194,14 @@ choose_sf_power <- function(metabolites,
           stop()
      }
 
-     powers <- c(c(1:10),
-                 seq(from = 12,
-                     to = 20,
-                     by = 2))
+     powers <- c(1:30)
 
      get_power_table <- function(data,
                                  powers) {
           data <- data %>%
                   select(-RID)
           sft <- pickSoftThreshold(data,
-                                   powerVector = powers,
-                                   verbose = 5)
+                                   powerVector = powers)
           power_table <- sft[[2]]
           return(power_table)
      }
@@ -231,13 +228,18 @@ choose_sf_power <- function(metabolites,
                           power_table[, 2]
           }
 
+          y_min <- min(y) - 0.2
+
           pdf(file = filename)
           plot(x,
                y,
                xlab = "Soft Threshold (power)",
                ylab = "Scale Free Topology Model Fit,signed R^2",
                type = "n",
-               main = paste("Scale independence"))
+               main = paste("Scale independence"),
+               ylim = c(y_min, 1))
+          abline(h = 0.8,
+                 col = "red")
           text(x,
                y,
                labels = powers,
@@ -315,6 +317,38 @@ choose_sf_power <- function(metabolites,
                         filename,
                         powers)
      }
+}
+
+check_scale_free <- function(metabolites,
+                             plotname="scale_free_check_p180",
+                             soft_power=6) {
+     # Check the scale free topology criteria by plotting
+     # the network connectivities
+     #
+     # Parameters
+     # ----------
+     # metabolites: dataframe with metabolite concentration
+     #              values stratified by sex or not
+     # plotname: str with the name of the plots
+     # soft_power: selected soft-threshold to use
+     #
+
+     filename <- paste0("../results/plots/",
+                        plotname,
+                        ".pdf")
+     data <- metabolites %>%
+             select(-RID)
+     ADJ1 <- abs(cor(data,
+                     use = "p"))^soft_power
+     k <- as.vector(apply(ADJ1,
+                          2,
+                          sum,
+                          na.rm = T))
+     pdf(file = filename)
+     hist(k)
+     scaleFreePlot(k,
+                   main = "Check scale free topology\n")
+     dev.off()
 }
 
 compute_wgcna <- function(metabolites,
@@ -426,7 +460,7 @@ compute_wgcna <- function(metabolites,
           mes <- moduleEigengenes(data,
                                   colors = prelim_colors)
           # Calculate dissimilarity of module eigengenes
-          module_diss <- 1 - cor(mes$eigengene)
+          module_diss <- 1 - cor(mes$eigengenes)
           # Call an automatic merging function
           merge <- mergeCloseModules(data,
                                      prelim_colors,
@@ -436,10 +470,29 @@ compute_wgcna <- function(metabolites,
      # Cluster modules tree
      me_tree <- hclust(as.dist(module_diss),
                        method = "average")
-     # The merged module colors
-     final_colors <- merge$colors
-     # Eigengenes of the new merged modules:
-     final_mes <- merge$newMEs
+     
+     #Change names for kmeans
+     print('-----Running K-means-----')
+     names(merge)[1] <- "moduleColors"
+     names(merge)[6] <- "MEs"
+     #Apply KMeans
+     k_means <- applyKMeans('metabolites',
+                            merge,
+                            data,
+                            n.iterations = 100,
+                            debug = F,
+                            n.debug = 500,
+                            net.type = "unsigned",
+                            min.exchanged.genes = 20,
+                            excludeGrey = F,
+                            silent = F)
+     #Compute new MEs
+     n_partitions <- length(k_means$partitions)
+     final_colors <- k_means$partitions[[n_partitions]]
+     final_mes <- moduleEigengenes(data,
+                                   colors = final_colors)
+     final_mes <- final_mes$eigengenes
+
      #### PLOTS
      if (!is.null(plotname)) {
           # Plot dendrogram with initial and final modules
