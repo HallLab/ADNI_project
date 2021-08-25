@@ -928,13 +928,13 @@ class QT_pad:
         diagnosis: str
             diagnosis column name
         '''
+        print('-----Loading qt-pad data-----')
         self.phenotypes = ['Ventricles',
                            'Hippocampus',
                            'WholeBrain',
                            'Entorhinal',
                            'Fusiform',
-                           'MidTemp',
-                           'ICV']
+                           'MidTemp']
         self.covariates = ['AGE',
                            'PTEDUCAT',
                            'APOE4',
@@ -949,12 +949,26 @@ class QT_pad:
 
         keep_columns = [self.diagnosis] +\
                         self.covariates +\
-                        self.phenotypes
+                        self.phenotypes +\
+                       ['ICV']
                        
         dat = dat.reset_index().set_index('RID')
         dat = dat.loc[:,keep_columns]
+        n_participants = dat.shape[0]
+        
+        print('There are ' +
+              str(n_participants) + 
+              ' with baseline data')
 
         self.data = dat.dropna(axis=0)
+        n_participants = self.data.shape[0]
+        print('There are ' +
+              str(n_participants) + 
+              ' with complete data\n')
+        
+        for voi in self.phenotypes:
+            voi_corrected  = self.data[voi] / self.data['ICV']
+            self.data[voi] = voi_corrected
 
         # Replace diagnosis categories
         to_replace = {'SMC': 'CN', 
