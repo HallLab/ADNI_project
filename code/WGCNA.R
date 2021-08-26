@@ -20,8 +20,8 @@ choose_sf_power(p180,
                 plotname = "wgcna_power_p180")
 choose_sf_power(nmr,
                 plotname = "wgcna_power_nmr")
-# Based on the analysis we chose a power of 18 for p180,
-# and 23 for nmr
+# Based on the analysis we chose a power of 4 for p180,
+# and 11 for nmr
 
 #### 3.5 CHECK SCALE-FREE TOPOLOGY
 check_scale_free(p180,

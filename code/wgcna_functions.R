@@ -497,6 +497,11 @@ compute_wgcna <- function(metabolites,
                                    colors = final_colors)
      final_mes <- final_mes$eigengenes
 
+     #Compute module membership
+     module_membership <- as.data.frame(cor(data,
+                                            final_mes,
+                                            use = "p"))
+
      #### PLOTS
      if (!is.null(plotname)) {
           # Plot dendrogram with initial and final modules
@@ -543,7 +548,8 @@ compute_wgcna <- function(metabolites,
                    "tree" = prelim_tree,
                    "colors" = final_colors,
                    "eigenmetabolites" = final_mes,
-                   "RID" = rid)
+                   "RID" = rid,
+                   "MM" = module_membership)
      return(wgcna)
 }
 
@@ -597,11 +603,20 @@ save_wgcna <- function(wgcna,
      colors_name <- paste0("../results/module_colors_",
                            suffix,
                            ".csv")
-     write.table(wgcna[[3]],
+     color_table <- data.frame(cbind(wgcna$colors,
+                                     rownames(wgcna$MM)))
+     write.table(color_table,
                  file = colors_name,
                  row.names = FALSE,
                  col.names = FALSE,
-                 quote = FALSE)
+                 quote = FALSE,
+                 sep = ",")
+
+     mm_filename <- paste0("../results/MM_",
+                           suffix,
+                           ".csv")
+     write.csv(wgcna$MM,
+               file = mm_filename)
 }
 
 export_to_cytoscape <- function(wgcna,
