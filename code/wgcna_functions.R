@@ -194,16 +194,16 @@ choose_sf_power <- function(metabolites,
           stop()
      }
 
-     powers <- c(1:30)
+     powers <- c(2:30)
 
-     get_power_table <- function(data,
-                                 powers) {
+     get_power_info <- function(data,
+                                powers) {
           data <- data %>%
                   select(-RID)
           sft <- pickSoftThreshold(data,
+                                   RsquaredCut = 0.70,
                                    powerVector = powers)
-          power_table <- sft[[2]]
-          return(power_table)
+          return(sft)
      }
 
      plot_sf_power <- function(power_table,
@@ -295,28 +295,31 @@ choose_sf_power <- function(metabolites,
           power_tables <- vector(mode = "list",
                                  length = n_sets)
           for (i in 1:n_sets) {
-               power_tables[[i]] <- get_power_table(metabolites[[i]],
-                                                    powers)
+               power_tables[[i]] <- get_power_info(metabolites[[i]],
+                                                   powers)
           }
 
           # Plot the results
           filename <- paste0("../results/plots/",
                              plotname,
                              ".pdf")
-          plot_sf_power(power_tables,
+          plot_sf_power(power_tables[[2]],
                         filename,
                         powers)
      } else if (stratified == FALSE) {
-          power_tables <- get_power_table(metabolites,
-                                          powers)
+          power_tables <- get_power_info(metabolites,
+                                         powers)
           # Plot the results
           filename <- paste0("../results/plots/",
                              plotname,
                              ".pdf")
-          plot_sf_power(power_tables,
+          plot_sf_power(power_tables[[2]],
                         filename,
                         powers)
      }
+     statement <- paste0("The best power is ",
+                         as.character(power_tables[[1]]))
+     print(statement)
 }
 
 check_scale_free <- function(metabolites,
@@ -434,15 +437,13 @@ compute_wgcna <- function(metabolites,
      # Module identification using dynamic tree cut:
      prelim_modules <- cutreeDynamic(dendro = prelim_tree,
                                      distM = diss_tom,
-                                     deepSplit = 2,
-                                     pamRespectsDendro = FALSE,
                                      minClusterSize = min_module_size)
      # Convert numeric lables into colors
      prelim_colors <- labels2colors(prelim_modules)
 
      ## Merging modules that are very similar
-     # The height cut of 0.25 means modules with correlations greater than 0.75
-     me_diss_thres <- 0.25
+     # The height cut of 0.10 means modules with correlations greater than 0.90
+     me_diss_thres <- 0.10
      if (class(metabolites) == "list") {
           # Calculate eigengenes
           module_mes <- multiSetMEs(multi_expr,
@@ -470,6 +471,9 @@ compute_wgcna <- function(metabolites,
      # Cluster modules tree
      me_tree <- hclust(as.dist(module_diss),
                        method = "average")
+
+     # Keep merged colors for plot
+     merged_colors <- merge$colors
      
      #Change names for kmeans
      print('-----Running K-means-----')
@@ -501,8 +505,12 @@ compute_wgcna <- function(metabolites,
                              ".pdf")
           pdf(file = filename)
           plotDendroAndColors(prelim_tree,
-                              cbind(prelim_colors, final_colors),
-                              c("Dynamic Tree Cut", "Merged dynamic"),
+                              cbind(prelim_colors,
+                                    merged_colors,
+                                    final_colors),
+                              c("Dynamic Tree Cut",
+                                "Merged dynamic",
+                                "K-means"),
                               dendroLabels = FALSE,
                               hang = 0.03,
                               addGuide = TRUE,
