@@ -14,9 +14,10 @@ cd $PBS_O_WORKDIR
 conda activate adni_project
 
 # Set up directory
-mkdir results/
+mkdir -p results
 mkdir results/plots
 # Copy data sets
+mkdir -p data
 for file in `cat ADNI_data_files.txt`
 do
 cp "$file" "data/"
