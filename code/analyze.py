@@ -55,7 +55,7 @@ class ADNI:
         
         # Load phenotypes and covariates
         qtpad = clean.QT_pad()
-        covs   = qtpad.data.loc[:,qtpad.covariates]
+        covs  = qtpad.data.loc[:,qtpad.covariates]
         self.covariate_names = qtpad.covariates
         if phenotypes_pls:
             phenos = pd.read_csv('../results/pheno_pls_components.csv').\
@@ -176,9 +176,9 @@ class ADNI:
                                                continuous_vars)
                 covs = self.covariate_names.copy()
                 covs.remove('PTGENDER')
-                r = clarite.analyze.ewas(p,
-                                         covs,
-                                         data_temp)
+                r = clarite.analyze.association_study(data = data_temp,
+                                                      outcomes = p,
+                                                      covariates = covs)
                 results.append(r)
 
         for i in range(len(results)):
