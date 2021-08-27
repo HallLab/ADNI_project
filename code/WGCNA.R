@@ -63,3 +63,6 @@ print("-----Saving files-----")
 save_wgcna(wgcna_p180)
 save_wgcna(wgcna_nmr,
            suffix = "nmr")
+
+#### 8. PRINT SESSION ####
+sessionInfo()
