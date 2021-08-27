@@ -37,7 +37,7 @@ class ADNI:
         covariate_names: list of str
             covariate names
         modules: bool
-            whether it is modules or not
+            whether it is metabolite wgcna modules or not
         filename: str
             name of the metabolite_type and module for future saving
         '''
@@ -259,16 +259,10 @@ class ADNI:
             results_diff.append(final_dat)
         self.results_diff = results_diff
 
-    def categorize_sex_diff(self,
-                            on_modules:bool=False):
+    def categorize_sex_diff(self):
         '''
         Categorize the results from the sex difference.
         Be sure to run sex_diff_test and meta_analysis before
-
-        Parameters
-        ----------
-        on_modules: bool
-            whether the categorization is done on module results
 
         Returns
         ----------
@@ -277,8 +271,8 @@ class ADNI:
         '''
         indices = [[0,2], [1,3]]
         filter_t = 0.05
-        if on_modules:
-            n_modules = len(self.module_colors)-1
+        if self.modules:
+            n_modules = len(self.metabolite_names)-1
             diff_t = 0.05/n_modules
         else:
             diff_t   = 0.05/55
@@ -336,8 +330,7 @@ class ADNI:
             self.results_diff[i].loc[keep_pure,'difference_type']  =\
                 'Pure'
 
-    def categorize_arnold20(self, 
-                            on_modules:bool=False):
+    def categorize_arnold20(self):
         '''
         Categorize based on criteria from Arnold et al 2020 paper
 
@@ -351,8 +344,8 @@ class ADNI:
         results_diff: pd.DataFrame
             dataframe of the sex difference plus the category 
         '''
-        if on_modules:
-            n_modules = len(self.module_colors)-1
+        if self.modules:
+            n_modules = len(self.metabolite_names)-1
             b_alpha = 0.05/n_modules
         else:
             b_alpha   = 0.05/55
