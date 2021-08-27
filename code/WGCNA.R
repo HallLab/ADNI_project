@@ -44,6 +44,7 @@ wgcna_p180 <- compute_wgcna(p180,
                             soft_power = 4)
 wgcna_nmr <- compute_wgcna(nmr,
                            soft_power = 11,
+                           min_module_size=10,
                            plotname = "wgcna_dendrogram_nmr",
                            plot_modules = "wgcna_module_tree_nmr")
 
