@@ -7,6 +7,9 @@ nmr   = clean.Metabolites('nmr')
 qtpad = clean.QT_pad()
 meds  = clean.Meds()
 
+#### Summary information
+qtpad.print_summary()
+
 #### Remove metabolites
 p180.remove_missing_metabolites()
 p180.compute_cross_plate_correction() 

@@ -950,7 +950,7 @@ class QT_pad:
         keep_columns = [self.diagnosis] +\
                         self.covariates +\
                         self.phenotypes +\
-                       ['ICV']
+                       ['ICV', 'ORIGPROT'] 
                        
         dat = dat.reset_index().set_index('RID')
         dat = dat.loc[:,keep_columns]
@@ -976,6 +976,28 @@ class QT_pad:
                       'LMCI': 'MCI'}
         self.data[self.diagnosis].replace(to_replace,
                                           inplace=True)
+    
+    def print_summary(self):
+        '''
+        Print a summary stats from qtpad data
+        '''        
+        dat = self.data.copy()
+        dat.loc[:,'COUNT'] = 1
+
+        table = pd.pivot_table(dat,
+                               index=['ORIGPROT',
+                                       'PTGENDER',
+                                       'APOE4'],
+                               values=['PTEDUCAT',
+                                       'AGE',
+                                       'COUNT'],
+                               aggfunc={'PTEDUCAT': [np.mean, np.std],
+                                        'AGE': [np.mean, np.std],
+                                        'COUNT': np.sum}).round(1)
+        
+        print(table)
+        print(dat['APOE4'].value_counts())
+        print(dat['PTGENDER'].value_counts())
     
     def PLS_DA(self,
                n_components:int=2):
