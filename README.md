@@ -99,5 +99,6 @@ Copy the following files from ADNI in the `data` folder
 Next, on the terminal, type:
 
 ```bash
+conda activate adni_project
 bash run_local.sh
 ```
