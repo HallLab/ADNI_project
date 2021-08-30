@@ -45,7 +45,8 @@ wgcna_p180 <- compute_wgcna(p180,
 wgcna_nmr <- compute_wgcna(nmr,
                            soft_power = 11,
                            plotname = "wgcna_dendrogram_nmr",
-                           plot_modules = "wgcna_module_tree_nmr")
+                           plot_modules = "wgcna_module_tree_nmr",
+                           min_module_size = 10)
 
 #### 6. HEATMAP VISUALIZATION ####
 print("-----Generating visualizations-----")
