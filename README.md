@@ -34,7 +34,7 @@ If, for any reason, the installation through the environment file fails, you can
 conda config --add channels r
 conda config --add channels bioconda
 conda config --add channels conda-forge
-conda create --name adni_project python=3.9 pandas numpy scipy jupyterlab statsmodels scikit-learn pingouin r-base r-wgcna
+conda create --name adni_project python=3.9 pandas numpy scipy jupyterlab statsmodels scikit-learn pingouin r-base r-wgcna r-dplyr
 conda activate adni_project
 pip install clarite
 ```
