@@ -1,8 +1,6 @@
 #### 0. SETTINGS AND LIBRARIES ####
-set.seed(123)
 library(WGCNA)
 library(dplyr)
-library(CoExpNets)
 enableWGCNAThreads()
 
 #### 1. FUNCTIONS ####
