@@ -1015,6 +1015,10 @@ class QT_pad:
         ---------
         scores: pd.DataFrame
             PLS scores
+        x_weights: pd.DataFrame
+            Weights of X
+        y_weights: pd.DataFrame
+            Weights of Y
         '''
         print('-----Running PLS-DA-----\n')
         self.data[self.phenotypes] = self.data[self.phenotypes].\
@@ -1035,6 +1039,19 @@ class QT_pad:
         self.scores.rename(columns={0:'Component 1',
                                     1:'Component 2'},
                            inplace=True)
+        self.x_weights = pd.DataFrame(PLSDA.x_weights_)
+        self.x_weights.index = X.columns
+        self.x_weights.rename(columns={0:'Weight 1',
+                                       1:'Weight 2'},
+                              inplace=True)
+        self.y_weights = pd.DataFrame(PLSDA.y_weights_)
+        y_weight_columns = ['AD',
+                            'CN',
+                            'MCI']
+        self.y_weights.index = y_weight_columns
+        self.y_weights.rename(columns={0:'Weight 1',
+                                       1:'Weight 2'},
+                              inplace=True)        
 
     def save_PLS(self,
                  savepath):
