@@ -25,10 +25,10 @@ choose_sf_power(nmr,
 
 #### 4 CHECK SCALE-FREE TOPOLOGY
 check_scale_free(p180,
-                 soft_power = 7)
+                 soft_power = 9)
 check_scale_free(nmr,
                  plotname = "scale_free_check_nmr",
-                 soft_power = 19)
+                 soft_power = 11)
 
 #### 4. COMPARE MODULE PRESERVATION
 #print("-----Comparing modules by sex-----")
@@ -41,9 +41,9 @@ check_scale_free(nmr,
 #### 5. NETWORK CONSTRUCTION AND MODULE DETECTION ####
 print("-----Network construction and module detection-----")
 wgcna_p180 <- compute_wgcna(p180,
-                            soft_power = 7)
+                            soft_power = 9)
 wgcna_nmr <- compute_wgcna(nmr,
-                           soft_power = 19,
+                           soft_power = 11,
                            plotname = "wgcna_dendrogram_nmr",
                            plot_modules = "wgcna_module_tree_nmr")
 
