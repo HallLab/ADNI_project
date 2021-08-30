@@ -472,35 +472,17 @@ compute_wgcna <- function(metabolites,
      # Cluster modules tree
      me_tree <- hclust(as.dist(module_diss),
                        method = "average")
-
-     # Keep merged colors for plot
-     merged_colors <- merge$colors
      
      #Change names for kmeans
-     print('-----Running K-means-----')
      names(merge)[1] <- "moduleColors"
      names(merge)[6] <- "MEs"
-     #Apply KMeans
-     k_means <- applyKMeans('metabolites',
-                            merge,
-                            data,
-                            n.iterations = 100,
-                            debug = F,
-                            n.debug = 500,
-                            net.type = "unsigned",
-                            min.exchanged.genes = 20,
-                            excludeGrey = F,
-                            silent = F)
-     #Compute new MEs
-     n_partitions <- length(k_means$partitions)
-     final_colors <- k_means$partitions[[n_partitions]]
-     final_mes <- moduleEigengenes(data,
-                                   colors = final_colors)
-     final_mes <- final_mes$eigengenes
-
+     # Keep merged colors for plot
+     merged_colors <- merge$moduleColors
+     merged_mes    <- merge$MEs
+     
      #Compute module membership
      module_membership <- as.data.frame(cor(data,
-                                            final_mes,
+                                            merged_mes,
                                             use = "p"))
 
      #### PLOTS
@@ -512,11 +494,9 @@ compute_wgcna <- function(metabolites,
           pdf(file = filename)
           plotDendroAndColors(prelim_tree,
                               cbind(prelim_colors,
-                                    merged_colors,
-                                    final_colors),
+                                    merged_colors),
                               c("Dynamic Tree Cut",
-                                "Merged dynamic",
-                                "K-means"),
+                                "Merged dynamic"),
                               dendroLabels = FALSE,
                               hang = 0.03,
                               addGuide = TRUE,
@@ -547,8 +527,8 @@ compute_wgcna <- function(metabolites,
 
      wgcna <- list("TOM" = tom,
                    "tree" = prelim_tree,
-                   "colors" = final_colors,
-                   "eigenmetabolites" = final_mes,
+                   "colors" = merged_colors,
+                   "eigenmetabolites" = merged_mes,
                    "RID" = rid,
                    "MM" = module_membership)
      return(wgcna)
