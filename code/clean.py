@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pingouin as pg
+import statsmodels.api as sm
 
 from warnings import simplefilter
 from sklearn import linear_model
@@ -1230,19 +1231,41 @@ def _get_residuals(outcomes,
     predictors: pd.DataFrame
         dataframe with the predictor variables
     '''
-    residuals = outcomes.copy()
-    for col in outcomes.columns:
-        regr = linear_model.LinearRegression()
-        new_dat = pd.merge(outcomes[col],
-                           predictors,
-                           left_on='RID',
-                           right_on='RID')
-        Y = new_dat[col]
-        X = new_dat.loc[:, new_dat.columns != col]
-
-        regr.fit(X, Y)
-        predicted = regr.predict(X)
-        res = Y - predicted
-        residuals[col] = res
-
+    new_dat = pd.merge(outcomes,
+                       predictors,
+                       left_on='RID',
+                       right_on='RID')
+    Y = new_dat.loc[:,outcomes.columns]
+    residuals = Y.copy()
+    X = new_dat.loc[:,predictors.columns]
+    # Remove meds with only zeros
+    keep_meds = X.mean() > 0
+    X = X.loc[:,keep_meds]
+    for y in Y:
+        results = sm.OLS(exog = X,
+                         endog = Y[y]).fit()
+        med_names = list(X.columns)
+        n_significants     = sum(results.pvalues < 0.05)
+        n_not_significants = sum(results.pvalues > 0.05)
+        while n_not_significants > 0:
+            drop_med = results.pvalues[results.pvalues > 0.05].\
+                               sort_values(ascending=False).\
+                               index[0]
+            med_names.remove(drop_med)
+            if not med_names:
+                print('No significant medications in ' + 
+                      y + 
+                      '\n')
+                break
+            else:
+                results = sm.OLS(exog = X[med_names],
+                                 endog = Y[y]).fit()
+                n_significants = sum(results.pvalues < 0.05)
+                n_not_significants = sum(results.pvalues > 0.05)
+        if n_significants > 0:
+            print('There are significant medications in ' +
+                  y)
+            print(med_names)
+            print('')
+            residuals[y] = results.resid
     return(residuals)
