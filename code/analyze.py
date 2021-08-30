@@ -287,7 +287,9 @@ class ADNI:
             overall_filter = self.results_meta[i]['pvalue'] < filter_t
             if sum(overall_filter) > 0:
                 bonf_filter_t = 0.05 / sum(overall_filter)
-                filter_diff   = self.results_diff[i]['pvalue'] < bonf_filter_t
+                filter_diff   = self.results_diff[i].\
+                                     loc[overall_filter,
+                                         'pvalue'] < bonf_filter_t
             else:
                 filter_diff = self.results_diff[i]['pvalue'] > 100 # All false
 
