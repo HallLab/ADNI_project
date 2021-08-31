@@ -19,9 +19,10 @@ print("-----Choosing soft-thresholding power-----")
 choose_sf_power(p180,
                 plotname = "wgcna_power_p180")
 choose_sf_power(nmr,
-                plotname = "wgcna_power_nmr")
-# Based on the analysis we chose a power of 7 for p180,
-# and 19 for nmr
+                plotname = "wgcna_power_nmr",
+                suffix = "NMR")
+# Based on the analysis we chose a power of 9 for p180,
+# and 11 for nmr
 
 #### 4 CHECK SCALE-FREE TOPOLOGY
 check_scale_free(p180,
@@ -48,16 +49,11 @@ wgcna_nmr <- compute_wgcna(nmr,
                            plot_modules = "wgcna_module_tree_nmr",
                            min_module_size = 10)
 
-#### 6. HEATMAP VISUALIZATION ####
+#### 6. VISUALIZATION ####
 print("-----Generating visualizations-----")
-plot_heatmap(wgcna_p180[[1]],
-             wgcna_p180[[2]],
-             wgcna_p180[[3]])
-
-plot_heatmap(wgcna_nmr[[1]],
-             wgcna_nmr[[2]],
-             wgcna_nmr[[3]],
-             plotname = "heatmap_nmr")
+plot_heatmap(wgcna_p180)
+plot_heatmap(wgcna_nmr,
+             suffix = "nmr")
 
 #### 7. SAVING FILES AND EXPORTING ####
 print("-----Saving files-----")
