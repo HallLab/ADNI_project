@@ -87,5 +87,5 @@ Next, on the terminal, type:
 
 ```bash
 conda activate adni_project
-bash run_local.sh
+bash run_local.sh > run_local.log
 ```
