@@ -170,6 +170,7 @@ compare_modules <- function(stratified_metabolites,
 
 choose_sf_power <- function(metabolites,
                             plotname="wgcna_power_p180",
+                            suffix="p180",
                             stratified=NULL) {
      # Go through the process of selecting a set of powers, and
      # plot the results
@@ -193,7 +194,7 @@ choose_sf_power <- function(metabolites,
           stop()
      }
 
-     powers <- c(2:30)
+     powers <- c(2:20)
 
      get_power_info <- function(data,
                                 powers) {
@@ -229,15 +230,19 @@ choose_sf_power <- function(metabolites,
 
           y_min <- min(y) - 0.2
 
-          pdf(file = filename)
+          pdf(file = filename,
+              width = 12,
+              height = 6)
+          par(mfrow = c(1, 2))
           plot(x,
                y,
                xlab = "Soft Threshold (power)",
                ylab = "Scale Free Topology Model Fit,signed R^2",
                type = "n",
-               main = paste("Scale independence"),
+               main = paste0("Scale independence ",
+                             suffix),
                ylim = c(y_min, 1))
-          abline(h = 0.8,
+          abline(h = 0.7,
                  col = "red")
           text(x,
                y,
@@ -269,7 +274,8 @@ choose_sf_power <- function(metabolites,
                xlab = "Soft Threshold (power)",
                ylab = "Mean Connectivity",
                type = "n",
-               main = paste("Mean connectivity"))
+               main = paste0("Mean connectivity ",
+                             suffix))
           text(x,
                y,
                labels = powers,
@@ -470,14 +476,12 @@ compute_wgcna <- function(metabolites,
      # Cluster modules tree
      me_tree <- hclust(as.dist(module_diss),
                        method = "average")
-     
      #Change names for kmeans
      names(merge)[1] <- "moduleColors"
      names(merge)[6] <- "MEs"
      # Keep merged colors for plot
      merged_colors <- merge$moduleColors
      merged_mes    <- merge$MEs
-     
      #Compute module membership
      module_membership <- as.data.frame(cor(data,
                                             merged_mes,
@@ -532,23 +536,28 @@ compute_wgcna <- function(metabolites,
      return(wgcna)
 }
 
-plot_heatmap <- function(tom,
-                         tree,
-                         colors,
-                         plotname="heatmap_p180") {
-     # Plot the TOM as a heatmap
-
-     plot_diss <- (tom)
+plot_heatmap <- function(wgcna,
+                         suffix="p180") {
+     # Plot the TOM as a heatmap including dendrogram
+     # Parameters
+     # ----------
+     # wgcnas: list
+     #    list of object as generated from compute_wgcna function
+     # suffix: suffix to add to the plot
+     #
+     plot_diss <- (wgcna$TOM)
      diag(plot_diss) <- NA
-     filename <- paste0("../results/plots/",
-                        plotname,
+     filename <- paste0("../results/plots/heatmap_",
+                        suffix,
                         ".pdf")
      pdf(file = filename)
      TOMplot(plot_diss,
-             tree,
-             colors,
-             main = "Network heatmap plot")
+             wgcna$tree,
+             wgcna$colors,
+             main = paste0("Network heatmap plot ",
+                           suffix))
      dev.off()
+
 }
 
 save_wgcna <- function(wgcna,
