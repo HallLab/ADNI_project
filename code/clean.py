@@ -236,7 +236,8 @@ class Metabolites:
               ' metabolites\n')
 
     def remove_missing_metabolites(self,
-                                   cutoff: float = 0.2):
+                                   cutoff: float = 0.2,
+                                   by_cohort: bool = True):
         '''
         Remove metabolites due to missing data greater than cutoff
         
@@ -244,6 +245,9 @@ class Metabolites:
         ----------
         cutoff: float
             Missing data removal cutoff
+        by_cohort: bool
+            Whether to analyze by cohort, or by merging metabolites
+            across cohorts (only applicable in p180 platform)
 
         Returns
         ----------
@@ -255,11 +259,17 @@ class Metabolites:
         print('-----Removing metabolites with missing data greater than ' +
               str(cutoff) + '-----')
         if self.platform == 'p180':
-            indices = [[0,2], [1,3]]
             metabolite_list = []
+            if by_cohort:
+                indices = range(len(self.data))
+            else:
+                indices = [[0,2], [1,3]]
             for i in indices:
-                data = pd.concat([self.data[i[0]],
-                                  self.data[i[1]]])
+                if by_cohort:
+                    data = self.data[i]
+                else:
+                    data = pd.concat([self.data[i[0]],
+                                      self.data[i[1]]])
                 remove_met_table = _estimate_delete_missingness(data)
                 self._print_metabolites_removed(remove_met_table, i)
                 #Remove metabolites from data and pool
@@ -277,7 +287,8 @@ class Metabolites:
             print('')
 
     def remove_metabolites_cv(self,
-                              cutoff: float = 0.2):
+                              cutoff: float = 0.2,
+                              by_cohort: bool = True):
         '''
         Compute the coefficient of variation among duplicates or triplicates
         for each metabolite and remove metabolites with CV higher than cutoff.
@@ -286,7 +297,10 @@ class Metabolites:
         Parameters
         ----------
         cutoff: float
-            CV metabolite removal cutoff. 
+            CV metabolite removal cutoff.
+        by_cohort: bool
+            Whether to analyze by cohort, or by merging metabolites
+            across cohorts (only applicable in p180 platform)
 
         Returns
         ----------
@@ -301,11 +315,17 @@ class Metabolites:
             print('-----Removing metabolites with CV values greater than ' +
                   str(cutoff) + '-----')
             metabolite_list = []
-            indices = [[0,2], [1,3]]
+            if by_cohort:
+                indices = range(len(self.data))
+            else:
+                indices = [[0,2], [1,3]]
             for i in indices:
                 cv_interplate = []
-                data = pd.concat([self.data[i[0]],
-                                  self.data[i[1]]])
+                if by_cohort:
+                    data = self.data[i]
+                else:
+                    data = pd.concat([self.data[i[0]],
+                                      self.data[i[1]]])
                 duplicates_ID = data.index[\
                                 data.index.duplicated()].unique()
                 for j in range(len(duplicates_ID)):
@@ -326,7 +346,8 @@ class Metabolites:
                   ' metabolites removed in the p180 platform across cohorts\n')
 
     def remove_metabolites_icc(self,
-                               cutoff: float = 0.65):
+                               cutoff: float = 0.65,
+                               by_cohort: bool = True):
         '''
         Compute the intra-class correlation among duplicates or triplicates
         for each metabolite and removes metabolites with ICC lower than cutoff.
@@ -335,7 +356,10 @@ class Metabolites:
         Parameters
         ----------
         cutoff: float
-            ICC metabolite removal cutoff. 
+            ICC metabolite removal cutoff.
+        by_cohort: bool
+            Whether to analyze by cohort, or by merging metabolites
+            across cohorts (only applicable in p180 platform)
 
         Returns
         ----------
@@ -345,15 +369,21 @@ class Metabolites:
             Dataframe with metabolites removed due to low ICC.
         '''
         if self.platform == 'nmr':
-            print('Cannot compute the CV in the NMR platform')
+            print('Cannot compute the ICC in the NMR platform')
         else:
             print('-----Removing metabolites with ICC values lower than ' +
                   str(cutoff) + '-----')
             metabolite_list = []
-            indices = [[0,2], [1,3]]
+            if by_cohort:
+                indices = range(len(self.data))
+            else:
+                indices = [[0,2], [1,3]]
             for i in indices:
-                data = pd.concat([self.data[i[0]],
-                                  self.data[i[1]]])
+                if by_cohort:
+                    data = self.data[i]
+                else:
+                    data = pd.concat([self.data[i[0]],
+                                      self.data[i[1]]])
                 duplicates_ID  = data.index[\
                                  data.index.duplicated()].unique()
                 duplicates_dat = data.loc[duplicates_ID]
