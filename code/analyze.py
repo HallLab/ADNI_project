@@ -408,6 +408,7 @@ class ADNI:
 
             final_dat['pvalue_diff'] = self.results_diff[i]['pvalue']
             final_dat['z_diff'] = self.results_diff[i]['Z']
+            final_dat = final_dat.round(3)
             final_dat['difference_type'] = \
                         self.results_diff[i]['difference_type']
 
