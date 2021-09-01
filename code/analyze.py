@@ -30,6 +30,9 @@ class ADNI:
         ----------
         data: pd.DataFrame
             dataframe containing the values
+        metabolite_dict: pd.DataFrame
+            dataframe with extra notes and information of metabolites
+            (only if modules is False)
         metabolite_names: list of str
             metabolite names
         phenotype_names: list of str
@@ -42,16 +45,66 @@ class ADNI:
             name of the metabolite_type and module for future saving
         '''
         # Define filename
+        respath = '../results/'
+        datapath = '../data/'
         if modules:
             name = '_modules'
         else:
-            name = ''     
+            name = ''
+            usecols = ['FLDNAME',
+                       'TEXT',
+                       'NOTES']
+            if metabolite_type == 'p180':
+                dict_names = [datapath + 
+                              'ADMCDUKEP180FIAADNI2GO_DICT.csv',
+                              datapath +
+                              'ADMCDUKEP180UPLCADNI2GO_DICT.csv']
+                metabolite_dict = []
+                for n in dict_names:
+                    dat = pd.read_csv(n,
+                                      usecols=usecols).\
+                             set_index('FLDNAME')
+                    metabolite_dict.append(dat)
+                metabolite_dict = pd.concat(metabolite_dict,
+                                            axis=0)
+                metabolite_dict['KEGG'] = metabolite_dict['NOTES'].\
+                                            str.\
+                                            extract(r"(KEGG = C\d+)" )
+                metabolite_dict['HMDB'] = metabolite_dict['NOTES'].\
+                                            str.\
+                                            extract(r"(HMDB = HMDB\d+)" )
+                to_replace = ['KEGG',
+                              'HMDB']
+                for rep in to_replace:
+                    metabolite_dict[rep] = metabolite_dict[rep].\
+                                            str.\
+                                            replace(rep +
+                                                    ' = ',
+                                                    '')
+                metabolite_dict.drop('NOTES',
+                                     axis=1,
+                                     inplace=True)
+            elif metabolite_type == 'nmr':
+                dict_names = datapath +\
+                             'ADNINIGHTINGALE2_DICT.csv'
+                metabolite_dict = pd.read_csv(dict_names,
+                                              usecols=usecols).\
+                                     set_index('FLDNAME')
+                metabolite_dict.rename(columns={'NOTES': 'Class'},
+                                       inplace=True)
+
+            rename_cols = {'TEXT': 'Description'}
+            metabolite_dict.index.rename('Variable',
+                                         inplace=True)
+            metabolite_dict.rename(columns=rename_cols,
+                                   inplace=True)
+            metabolite_dict = metabolite_dict.drop_duplicates()
+            self.metabolite_dict = metabolite_dict
+           
         self.filename = 'results_' + \
                         metabolite_type + \
                         name
         self.modules = modules
-        
-        respath = '../results/'
         
         # Load phenotypes and covariates
         qtpad = clean.QT_pad()
@@ -388,38 +441,44 @@ class ADNI:
             folder path to save the file
         '''
         indices = [[0,2], [1,3]]
+        final_dat = []
         
         for i in range(len(indices)):
             f = indices[i][0]
             m = indices[i][1]
-            final_dat = self.results[f][['Beta',
-                                         'SE',
-                                         'pvalue']].copy()
-            final_dat.columns = ['Beta_female', 
-                                 'SE_female', 
-                                 'pvalue_female']
-            final_dat['Beta_male'] = self.results[m]['Beta']
-            final_dat['SE_male']   = self.results[m]['SE']
-            final_dat['pvalue_male'] = self.results[m]['pvalue']
+            dat = self.results[f][['Beta',
+                                   'pvalue']].copy()
+            dat.columns = ['Beta_female',
+                           'pvalue_female']
+            dat['Beta_male'] = self.results[m]['Beta']
+            dat['pvalue_male'] = self.results[m]['pvalue']
 
-            final_dat['Beta_total'] = self.results_meta[i]['Beta']
-            final_dat['SE_total']   = self.results_meta[i]['SE']
-            final_dat['pvalue_total'] = self.results_meta[i]['pvalue']
+            dat['Beta_total'] = self.results_meta[i]['Beta']
+            dat['pvalue_total'] = self.results_meta[i]['pvalue']
 
-            final_dat['pvalue_diff'] = self.results_diff[i]['pvalue']
-            final_dat['z_diff'] = self.results_diff[i]['Z']
-            final_dat = final_dat.round(3)
-            final_dat['difference_type'] = \
+            dat['pvalue_diff'] = self.results_diff[i]['pvalue']
+            cols_to_round = ['Beta_female',
+                             'Beta_male',
+                             'Beta_total']
+            dat[cols_to_round] = dat[cols_to_round].round(3)
+            dat['difference_type'] = \
                         self.results_diff[i]['difference_type']
 
-            final_dat['difference_arnold'] = \
+            dat['difference_arnold'] = \
                         self.results_diff[i]['difference_arnold']
+            if self.modules == False:
+                dat = pd.merge(dat,
+                               self.metabolite_dict,
+                               left_index=True,
+                               right_index=True)
+            final_dat.append(dat)
 
-            name = self.filename +\
-                   '_' +\
-                   self.phenotype_names[i] +\
-                   '.csv'
-            fullname = os.path.join(savepath,
-                                    name)
-            final_dat.to_csv(fullname)
+        final_dat = pd.concat(final_dat,
+                              axis=0)
+
+        name = self.filename +\
+               '.csv'
+        fullname = os.path.join(savepath,
+                                name)
+        final_dat.to_csv(fullname)
  

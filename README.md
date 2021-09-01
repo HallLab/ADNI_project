@@ -78,7 +78,8 @@ mkdir data/
 
 Copy the following files from ADNI in the `data` folder
 
-- p180 data files: `ADMCDUKEP180UPLC_01_15_16.csv`, `ADMCDUKEP180FIA_01_15_16.csv`, `ADMCDUKEP180UPLCADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO.csv`.
+- p180 data files: `ADMCDUKEP180UPLC_01_15_16.csv`, `ADMCDUKEP180FIA_01_15_16.csv`, `ADMCDUKEP180UPLCADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO_DICT.csv`, `ADMCDUKEP180UPLCADNI2GO_DICT.csv`.
+- nmr nightingale files: `ADNINIGHTINGALE2.csv`, `ADNINIGHTINGALE2_DICT.csv`.
 - fasting information: `BIOMARK.csv`.
 - LOD values: `P180FIALODvalues_ADNI1.csv`, `P180FIALODvalues_ADNI2GO.csv`, `P180UPLCLODvalues_ADNI1.csv`, `P180UPLCLODvalues_ADNI2GO.csv`.
 - QT-pad: `ADNI_adnimerge_20170629_QT-freeze.csv`.
