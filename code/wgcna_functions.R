@@ -346,9 +346,9 @@ check_scale_free <- function(metabolites,
                         ".pdf")
      data <- metabolites %>%
              select(-RID)
-     ADJ1 <- abs(cor(data,
+     adj1 <- abs(cor(data,
                      use = "p"))^soft_power
-     k <- as.vector(apply(ADJ1,
+     k <- as.vector(apply(adj1,
                           2,
                           sum,
                           na.rm = T))
@@ -591,21 +591,8 @@ save_wgcna <- function(wgcna,
      colors_name <- paste0("../results/module_colors_",
                            suffix,
                            ".csv")
-                           
      color_table <- data.frame(cbind(wgcna$colors,
                                      rownames(wgcna$MM)))
-     if(suffix == "nmr"){
-          # Add data dict for nmr
-          nmr_dict <- read.csv("../data/ADNINIGHTINGALE2_DICT.csv")
-          nmr_dict <- nmr_dict %>%
-                      select(FLDNAME,
-                             NOTES)
-          colnames(nmr_dict)[1] <- "X2"
-          color_table <- merge(color_table,
-                               nmr_dict,
-                               by="X2")
-     }
-     
      write.table(color_table,
                  file = colors_name,
                  row.names = FALSE,

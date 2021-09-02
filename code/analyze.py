@@ -33,6 +33,9 @@ class ADNI:
         metabolite_dict: pd.DataFrame
             dataframe with extra notes and information of metabolites
             (only if modules is False)
+        metabolite_modules: pd.DataFrame
+            dataframe with metabolite module assignment
+            (only if modules is False)
         metabolite_names: list of str
             metabolite names
         phenotype_names: list of str
@@ -84,6 +87,7 @@ class ADNI:
                 metabolite_dict.drop('NOTES',
                                      axis=1,
                                      inplace=True)
+                module_colors_name = 'module_colors_p180.csv'
             elif metabolite_type == 'nmr':
                 dict_names = datapath +\
                              'ADNINIGHTINGALE2_DICT.csv'
@@ -92,6 +96,7 @@ class ADNI:
                                      set_index('FLDNAME')
                 metabolite_dict.rename(columns={'NOTES': 'Class'},
                                        inplace=True)
+                module_colors_name = 'module_colors_nmr.csv'
 
             rename_cols = {'TEXT': 'Description'}
             metabolite_dict.index.rename('Variable',
@@ -100,6 +105,14 @@ class ADNI:
                                    inplace=True)
             metabolite_dict = metabolite_dict.drop_duplicates()
             self.metabolite_dict = metabolite_dict
+
+            rename_meta_cols = {0: 'Modules',
+                                1: 'Variable'}
+            metabolite_modules = pd.read_csv(respath + module_colors_name,
+                                             header=None).\
+                                    rename(columns=rename_meta_cols).\
+                                    set_index('Variable')
+            self.metabolite_modules = metabolite_modules
            
         self.filename = 'results_' + \
                         metabolite_type + \
@@ -460,7 +473,14 @@ class ADNI:
             cols_to_round = ['Beta_female',
                              'Beta_male',
                              'Beta_total']
+            cols_to_sc_round = ['pvalue_female',
+                                'pvalue_male',
+                                'pvalue_total',
+                                'pvalue_diff']
             dat[cols_to_round] = dat[cols_to_round].round(3)
+            for col in cols_to_sc_round:
+                dat[col] = dat[col].\
+                            apply(lambda x: '{:.1e}'.format(x))
             dat['difference_type'] = \
                         self.results_diff[i]['difference_type']
 
@@ -469,6 +489,10 @@ class ADNI:
             if self.modules == False:
                 dat = pd.merge(dat,
                                self.metabolite_dict,
+                               left_index=True,
+                               right_index=True)
+                dat = pd.merge(dat,
+                               self.metabolite_modules,
                                left_index=True,
                                right_index=True)
             final_dat.append(dat)
