@@ -31,14 +31,6 @@ check_scale_free(nmr,
                  plotname = "scale_free_check_nmr",
                  soft_power = 11)
 
-#### 4. COMPARE MODULE PRESERVATION
-#print("-----Comparing modules by sex-----")
-#mp_p180 <- compare_modules(stratified_p180,
-#                           soft_power = 7)
-#mp_nmr  <- compare_modules(stratified_nmr,
-#                           soft_power = 19,
-#                           plotname = "sex_module_comparison_nmr")
-
 #### 5. NETWORK CONSTRUCTION AND MODULE DETECTION ####
 print("-----Network construction and module detection-----")
 wgcna_p180 <- compute_wgcna(p180,
