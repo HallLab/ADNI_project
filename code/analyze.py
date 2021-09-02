@@ -402,11 +402,6 @@ class ADNI:
         '''
         Categorize based on criteria from Arnold et al 2020 paper
 
-        Parameters
-        ----------
-        on_modules: bool
-            whether the categorization is done on module results
-
         Returns
         ----------
         results_diff: pd.DataFrame
@@ -416,7 +411,10 @@ class ADNI:
             n_modules = len(self.metabolite_names)-1
             b_alpha = 0.05/n_modules
         else:
-            b_alpha   = 0.05/55
+            if 'p180' in self.filename:
+                b_alpha   = 0.05/50
+            elif 'nmr' in self.filename:
+                b_alpha   = 0.05/44
 
         for i in range(len(self.results_diff)):
             f = i + 2 # index for male sex specific result

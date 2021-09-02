@@ -39,6 +39,15 @@ conda activate adni_project
 pip install clarite
 ```
 
+### Installing poolr
+
+Next, install `poolr` in R to estimate the effective number of tests.
+Open R in the terminal, and then run:
+
+```R
+install.packages("poolr")
+```
+
 ## Download medication files from Synapse
 
 Before replicating the analysis, make sure you have an account created on [Synapse](https://www.synapse.org/).

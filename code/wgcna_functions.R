@@ -1,6 +1,7 @@
 #### 0. SETTINGS AND LIBRARIES ####
 library(WGCNA)
 library(dplyr)
+library(poolr)
 enableWGCNAThreads()
 
 #### 1. FUNCTIONS ####
@@ -558,6 +559,31 @@ plot_heatmap <- function(wgcna,
                            suffix))
      dev.off()
 
+}
+
+estimate_effective_tests <- function(metabolites) {
+     # Estimate the effective number of tests
+     #
+     # Parameters
+     # ----------
+     # metabolties: dataframe
+     #     dataframe with metabolite concentration values
+     #
+     data <- metabolites %>%
+             select(-RID)
+     if (length(data) > 200) {
+          platform <- "nmr"
+     } else {
+          platform <- "p180"
+     }
+     r <- cor(data)
+     diag(r) <- 1
+     res <- meff(r, method = "liji")
+     to_print <- paste0("The number of independent tests for the ",
+                        platform,
+                        " platform is ",
+                        as.character(res))
+     print(to_print)
 }
 
 save_wgcna <- function(wgcna,
