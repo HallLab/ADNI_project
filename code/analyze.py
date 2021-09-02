@@ -341,7 +341,10 @@ class ADNI:
             n_modules = len(self.metabolite_names)-1
             diff_t = 0.05/n_modules
         else:
-            diff_t   = 0.05/55
+            if 'p180' in self.filename:
+                diff_t   = 0.05/50
+            elif 'nmr' in self.filename:
+                diff_t   = 0.05/44
 
         for i in range(len(self.results_diff)):
             dat_female = self.results[indices[i][0]]
