@@ -1050,6 +1050,8 @@ class QT_pad:
             Weights of X
         y_weights: pd.DataFrame
             Weights of Y
+        vips: np.array
+            Variable importance in projection
         '''
         print('-----Running PLS-DA-----\n')
         self.data[self.phenotypes] = self.data[self.phenotypes].\
@@ -1064,6 +1066,8 @@ class QT_pad:
         PLSDA = PLSRegression(n_components = n_components).\
                               fit(X=X,
                                   Y=Y)
+        vips = _calculate_vips(PLSDA)
+        self.vips = vips
         
         self.scores = pd.DataFrame(PLSDA.x_scores_)
         self.scores.index = self.data.index
@@ -1299,3 +1303,33 @@ def _get_residuals(outcomes,
             print('')
             residuals[y] = results.resid
     return(residuals)
+
+def _calculate_vips(model):
+    '''
+    Estimates Variable Importance in Projection (VIP) 
+    in Partial Least Squares (PLS)
+    
+    Parameters
+    ----------
+    model: PLSRegression
+        model generated from the PLSRegression function
+    
+    Returns
+    ----------
+    vips: np.array
+        variable importance in projection for each variable
+    '''
+    import numpy as np
+    t = model.x_scores_
+    w = model.x_weights_
+    q = model.y_loadings_
+    p, h = w.shape
+    vips = np.zeros((p,))
+    s = np.diag(np.matmul(np.matmul(np.matmul(t.T,t),q.T), q)).\
+           reshape(h, -1)
+    total_s = np.sum(s)
+    for i in range(p):
+        weight = np.array([ (w[i,j] / \
+                            np.linalg.norm(w[:,j]))**2 for j in range(h) ])
+        vips[i] = np.sqrt(p*(np.matmul(s.T, weight))/total_s)
+    return(vips)
