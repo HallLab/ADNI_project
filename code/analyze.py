@@ -207,11 +207,10 @@ class ADNI:
             module_names = self.metabolite_names.copy()
             if 'MEgrey' in module_names:
                 module_names.remove('MEgrey')
-            for s in range(len(sexes)):
-                keep_cols = module_names + \
-                            self.phenotype_names + \
-                            self.covariate_names
-                temp_data = self.data.loc[:,keep_cols]
+            keep_cols = module_names + \
+                        self.phenotype_names + \
+                        self.covariate_names
+            temp_data = self.data.loc[:,keep_cols]
         else:
             temp_data = self.data
         
@@ -341,10 +340,11 @@ class ADNI:
             n_modules = len(self.metabolite_names)-1
             diff_t = 0.05/n_modules
         else:
-            if 'p180' in self.filename:
-                diff_t   = 0.05/50
-            elif 'nmr' in self.filename:
-                diff_t   = 0.05/44
+            m = _estimate_effective_tests(self.data[self.metabolite_names])
+            diff_t = 0.05/m
+            print('There are ' + 
+                  str(m) + 
+                  ' independent tests')
 
         for i in range(len(self.results_diff)):
             dat_female = self.results[indices[i][0]]
@@ -355,7 +355,16 @@ class ADNI:
             # Filtering first
             overall_filter = self.results_meta[i]['pvalue'] < filter_t
             if sum(overall_filter) > 0:
-                bonf_filter_t = 0.05 / sum(overall_filter)
+                filtered_metabolites = list(overall_filter[\
+                                            overall_filter].\
+                                                index.\
+                                                get_level_values(0))
+                filter_m = _estimate_effective_tests(self.data\
+                                                    [filtered_metabolites])
+                print('There are ' + 
+                      str(filter_m) + 
+                      ' filtered independent tests')
+                bonf_filter_t = 0.05 / filter_m
                 filter_diff   = self.results_diff[i].\
                                      loc[overall_filter,
                                          'pvalue'] < bonf_filter_t
@@ -507,3 +516,24 @@ class ADNI:
                                 name)
         final_dat.to_csv(fullname)
  
+def _estimate_effective_tests(data):
+    '''
+    Estimate number of effective tests based on 
+    Li & Ji, 2005
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        dataframe with values to estimate effective tests
+    '''
+    # Get correlation
+    r = data.corr()
+    # Get eigenvalues from r
+    w, v = np.linalg.eig(r)
+    w = abs(w)
+    # Estimate number of effective tests
+    m = sum((w >= 1) + (w - np.floor(w)))
+    m = np.floor(m)
+
+    return(int(m))
+        

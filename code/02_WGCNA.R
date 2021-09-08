@@ -8,9 +8,6 @@ print("-----Reading Data-----")
 p180  <- read_metabolite_data()
 nmr   <- read_metabolite_data(metabolite_type = "nmr")
 qtpad <- read_qtpad_data()
-# How many independent tests?
-estimate_effective_tests(p180)
-estimate_effective_tests(nmr)
 
 #Split males and females
 print("-----Stratifying Data-----")
