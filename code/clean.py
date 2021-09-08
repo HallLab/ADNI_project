@@ -1052,6 +1052,8 @@ class QT_pad:
             Weights of Y
         vips: np.array
             Variable importance in projection
+        x_variance_explained: np.array
+            Proportion of variance explained by components
         '''
         print('-----Running PLS-DA-----\n')
         self.data[self.phenotypes] = self.data[self.phenotypes].\
@@ -1063,11 +1065,19 @@ class QT_pad:
         Y.columns = encoder.get_feature_names([self.diagnosis])
         
         X = self.data.reset_index()[self.phenotypes]
+        x_variance = np.sum(np.var(X,
+                                   axis = 0))
+
         PLSDA = PLSRegression(n_components = n_components).\
                               fit(X=X,
                                   Y=Y)
         vips = _calculate_vips(PLSDA)
         self.vips = vips
+
+        x_scores_variance = np.var(PLSDA.x_scores_,
+                                   axis = 0) 
+                                   
+        self.x_variance_explained = x_scores_variance / x_variance
         
         self.scores = pd.DataFrame(PLSDA.x_scores_)
         self.scores.index = self.data.index
