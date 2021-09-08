@@ -15,6 +15,14 @@ modules   = [False,
 
 savepath = '../results'
 for i in range(0,4):
+    if modules:
+        end_line = 'with metabolite modules'
+    else:
+        end_line = 'with single metabolites'
+    print('-----Analyzing ' + 
+          platforms[i] + 
+          ' platform ' +
+          end_line)
     dat = analyze.ADNI(metabolite_type=platforms[i],
                        modules=modules[i],
                        phenotypes_pls=True)
