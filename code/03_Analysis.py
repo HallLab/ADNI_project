@@ -15,7 +15,7 @@ modules   = [False,
 
 savepath = '../results'
 for i in range(0,4):
-    if modules:
+    if modules[i]:
         end_line = 'with metabolite modules'
     else:
         end_line = 'with single metabolites'
