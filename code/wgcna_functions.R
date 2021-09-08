@@ -1,7 +1,6 @@
 #### 0. SETTINGS AND LIBRARIES ####
 library(WGCNA)
 library(dplyr)
-library(poolr)
 enableWGCNAThreads()
 
 #### 1. FUNCTIONS ####
