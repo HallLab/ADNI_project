@@ -609,23 +609,37 @@ save_wgcna <- function(wgcna,
 
 export_to_cytoscape <- function(wgcna,
                                 module,
-                                node_names) {
+                                metabolite_names) {
      # Export data for cytoscape visualization
      #
      # Parameters
      # ----------
      # wgcna: wgcna result from compute_wgcna
-     # module: name of module to export
-     # node_names: name of nodes
+     # module: name or list of names of module(s) to export
+     # metabolite_names: name of metabolites in the same order
+     #    as in the wgcna dataset
      #
-
-     in_module <- wgcna[[3]] == module
+     
+     if(class(module) == "list"){
+          in_module <- wgcna[[3]] == "algo"
+          for(mod in module){
+               temp_in_module <- wgcna[[3]] == mod
+               in_module      <- in_module | temp_in_module
+          }
+          module_name <- paste0(module,
+                                collapse="-")
+     } else {
+          in_module <- wgcna[[3]] == module
+          module_name <- module
+     }
+     
      edge_filename <- paste0("../results/CytoscapeInput-edges-",
-                              module,
+                              module_name,
                               ".txt")
      node_filename <- paste0("../results/CytoscapeInput-nodes-",
-                             module,
+                             module_name,
                              ".txt")
+     node_names <- (metabolite_names)[in_module]
 
      cyt <- exportNetworkToCytoscape(wgcna[[1]][in_module, in_module],
                                      edgeFile = edge_filename,

@@ -1,65 +1,160 @@
+#### LIBRARIES ####
+import enum
 import clean
+import plots
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
+#### PATHS AND DATA ####
 savepath = '../results/plots/'
 respath  = '../results/'
 
-#### Figure 1
-## PLSDA 
 qtpad = clean.QT_pad()
 qtpad.PLS_DA()
-fig = plt.figure(figsize = (12,6))
-fig.suptitle('PLS-DA', fontsize=16)
-ax1 = fig.add_subplot(1,2,1)
-ax2 = fig.add_subplot(1,2,2)
+color_pastel = cm.get_cmap('Set2')
+results_p180_modules = pd.read_csv(respath + 'results_p180_modules.csv').\
+                          set_index(['Variable',
+                                     'Outcome'])
+results_nmr_modules = pd.read_csv(respath + 'results_nmr_modules.csv').\
+                         set_index(['Variable',
+                                    'Outcome'])
+results_p180 = pd.read_csv(respath + 'results_p180.csv').\
+                  set_index(['Variable',
+                             'Outcome'])
+results_nmr = pd.read_csv(respath + 'results_nmr.csv').\
+                 set_index(['Variable',
+                            'Outcome'])
+p180_network = plt.imread(savepath + 
+                          'CytoscapeInput-edges-red.txt.png')
+nmr_network  = plt.imread(savepath + 
+                          'CytoscapeInput-edges-green-turquoise.txt.png')
 
-ax1.set_xlabel('Component 1', fontsize = 14)
-ax1.set_ylabel('Component 2', fontsize = 14)
-ax1.set_title('Scores', fontsize = 15)
+
+#### Figure 1
+## PLSDA 
+comp1 = qtpad.scores['Component 1']
+extreme_neg = comp1.sort_values().index[:20]
+extreme_pos = comp1.sort_values(ascending=False).index[:20]
+round(qtpad.data.loc[extreme_neg].mean(),3)
+round(qtpad.data.loc[extreme_pos].mean(),3)
+
+comp2 = qtpad.scores['Component 2']
+extreme_neg = comp2.sort_values().index[:20]
+extreme_pos = comp2.sort_values(ascending=False).index[:20]
+round(qtpad.data.loc[extreme_neg].mean(),3)
+round(qtpad.data.loc[extreme_pos].mean(),3)
+
+
+fig = plt.figure(figsize = (12,12))
+fig.tight_layout(h_pad=10)
+fig.suptitle('PLS-DA', fontsize=18)
+
+font_ax_title = 16
+font_axis = 12
+ax1 = fig.add_subplot(2,2,1)
+ax2 = fig.add_subplot(2,2,2)
+ax3 = fig.add_subplot(2,2,3)
+ax4 = fig.add_subplot(2,2,4)
+percent_1 = '(' + \
+            str(round(qtpad.x_variance_explained[0] * 100)) + \
+            '%)'
+percent_2 = '(' + \
+            str(round(qtpad.x_variance_explained[1] * 100)) + \
+            '%)'
+
+#### AX 1 ####
+ax1.set_xlabel('Component 1 ' + percent_1, 
+               fontsize = font_axis)
+ax1.set_ylabel('Component 2 ' + percent_2,
+               fontsize = font_axis)
+ax1.set_title('Scores',
+              fontsize = font_ax_title)
 targets = ['CN',
            'MCI',
            'AD']
-color_pastel = cm.get_cmap('Set2')
 c = 0
 for target in targets:
     indicesToKeep = qtpad.data['DX.bl'] == target
     ax1.scatter(qtpad.scores.loc[indicesToKeep,
-                                'Component 1'],
-               qtpad.scores.loc[indicesToKeep,
-                                'Component 2'],
-               color = color_pastel(c),
-               s = 50,
-               alpha = 0.7)
+                                 'Component 1'],
+                qtpad.scores.loc[indicesToKeep,
+                                 'Component 2'],
+                color = color_pastel(c),
+                s = 50,
+                alpha = 0.6)
     c = c + 1
 ax1.legend(targets)
 
-ax2.set_xlabel('Component 1', fontsize = 14)
-ax2.set_ylabel('Component 2', fontsize = 14)
-ax2.set_title('Weights', fontsize = 15)
-ax2.scatter(qtpad.x_weights['Weight 1'],
+#### AX 2 ####
+pos = np.arange(len(qtpad.vips))
+order = qtpad.vips.argsort()[::-1]
+ax2.set_title('Variable importance in projection (VIP)',
+              fontsize = font_ax_title)
+ax2.bar(pos,
+        qtpad.vips[order],
+        align='center',
+        width=0.8)
+ax2.set_xticks(pos)
+ax2.set_xticklabels(np.array(qtpad.phenotypes)[order],
+                    rotation=45)
+
+#### AX 3 ####
+color_cont = cm.get_cmap('BuPu')
+#genders = ['Female',
+#           'Male']
+#c = 0
+#for gender in genders:
+#    indicesToKeep = qtpad.data['PTGENDER'] == gender
+#    ax3.scatter(qtpad.scores.loc[indicesToKeep,
+#                                'Component 1'],
+#               qtpad.scores.loc[indicesToKeep,
+#                                'Component 2'],
+#               color = color_pastel(c),
+#               s = 50,
+#               alpha = 0.6)
+#    c = c + 1
+#ax3.legend(genders)
+ax3.set_title('Scores',
+              fontsize = font_ax_title)
+sc = ax3.scatter(qtpad.scores['Component 1'],
+                 qtpad.scores['Component 2'],
+                 s = 50,
+                 c = qtpad.data['WholeBrain'],
+                 cmap = color_cont)
+#plt.colorbar(sc,
+#             ax=ax3)
+
+#### AX 4 ####
+ax4.set_xlabel('Component 1',
+               fontsize = font_axis)
+ax4.set_ylabel('Component 2',
+               fontsize = font_axis)
+ax4.set_title('Weights',
+              fontsize = font_ax_title)
+ax4.scatter(qtpad.x_weights['Weight 1'],
             qtpad.x_weights['Weight 2'])
 for segment in qtpad.x_weights.index:
     if segment == 'Ventricles':
         xy_offset = (-10, 10)
     elif segment == 'Entorhinal':
-        xy_offset = (-55, -2)
+        xy_offset = (-55, -1)
     else:
         xy_offset = (-55, 4)
-    ax2.annotate(segment, 
+    ax4.annotate(segment, 
                  xy=(qtpad.x_weights.loc[segment,
                                         'Weight 1'],
                      qtpad.x_weights.loc[segment,
                                         'Weight 2']),
                  xytext=xy_offset,
                  textcoords="offset points")
-ax2.scatter(qtpad.y_weights['Weight 1'],
+ax4.scatter(qtpad.y_weights['Weight 1'],
             qtpad.y_weights['Weight 2'])
 for group in qtpad.y_weights.index:
     xy_offset = (-10, 5)
-    ax2.annotate(group, 
+    ax4.annotate(group, 
                  xy=(qtpad.y_weights.loc[group,
                                         'Weight 1'],
                      qtpad.y_weights.loc[group,
@@ -72,88 +167,72 @@ filename = savepath +\
 plt.savefig(filename,
             dpi=300)
 
-#### Figure 3
-# Betas and p-values in NMR
-modules_to_highlight = ['green',
-                        'turquoise']
-met_to_module_names = ['module_colors_nmr.csv',
-                       'module_colors_p180.csv']
-results_nmr = pd.read_csv(respath + 'results_nmr.csv').\
-                 set_index(['Variable',
-                            'Outcome'])
-results_p180 = pd.read_csv(respath + 'results_p180.csv').\
-                 set_index(['Variable',
-                            'Outcome'])
-components = ['Component 1',
-              'Component 2']
-axis_names = ['Effect in females',
-              'Effect in males']
-ax_titles = ['Differences in Component 1 (NMR)',
-             'Differences in Component 2 (NMR)',
-             'Differences in Component 1 (p180)',
-             'Differences in Component 2 (p180)']
+#### FIGURE 3: P180 platform ####
+# SET FIGURE
+fig = plt.figure(figsize = (12,12))
+fig.suptitle('Sex differences in P180 platform', fontsize=18)
+ax1 = fig.add_subplot(221)
+ax2 = fig.add_subplot(222)
+ax3 = fig.add_subplot(223)
+ax4 = fig.add_subplot(224)
 
-fig = plt.figure(figsize = (10,10))
-fig.suptitle('Effect size differences', fontsize=16)
-ax1 = fig.add_subplot(2,2,1)
-ax2 = fig.add_subplot(2,2,2)
-ax3 = fig.add_subplot(2,2,3)
-ax4 = fig.add_subplot(2,2,4)
-axes = [ax1,
-        ax2,
-        ax3,
-        ax4]
-for i in range(4):
-    if i < 2:
-        mod_name = respath + \
-                   met_to_module_names[0]
-        mods = pd.read_csv(mod_name, 
-                           header=None)
-        res = results_nmr.xs(components[i],
-                             level="Outcome")
-    else:
-        res = results_p180.xs(components[i-2],
-                              level="Outcome")
-    max_value = max(abs(res.loc[:,['Beta_female',
-                                   'Beta_male'] ]).max())
-    max_value_round = round(max_value + 0.1, 2)
-    min_max   = (-max_value_round,
-                 max_value_round)
-    pvals = -np.log(res['pvalue_diff'])
-    axes[i].scatter(res['Beta_female'],
-                    res['Beta_male'],
-                    color = 'grey',
-                    alpha = 0.4,
-                    s = pvals*20)
-    if i < 2:
-        for color in modules_to_highlight:
-            module_bool = mods[1] == color
-            module_metabolites = mods[0][module_bool]
-            axes[i].scatter(res.loc[module_metabolites,'Beta_female'],
-                            res.loc[module_metabolites,'Beta_male'],
-                            color = color,
-                            s = pvals[module_metabolites]*20,
-                            alpha = 0.7)
-    else:
-        class_to_highlight = ['Sex-specific',
-                              'Heterogeneous']
-        for cat in class_to_highlight:
-            class_bool = res['difference_arnold'] == cat
-            axes[i].scatter(res.loc[class_bool,'Beta_female'],
-                            res.loc[class_bool,'Beta_male'],
-                            color = 'red',
-                            s = pvals[class_bool]*20,
-                            alpha = 0.7)
-    axes[i].set_xlabel(axis_names[0], fontsize = 12)
-    axes[i].set_ylabel(axis_names[1], fontsize = 12)
-    axes[i].set_title(ax_titles[i], fontsize = 14)
-    axes[i].set_xlim(min_max)
-    axes[i].set_ylim(min_max)
-    axes[i].axhline(y=0, color='k')
-    axes[i].axvline(x=0, color='k')
+# AX1: forest plot
+plots.female_male_forest(results_p180_modules,
+                         color_pastel,
+                         ax1)
 
+# AX2: network
+ax2.imshow(p180_network)
+ax2.axis('off')
+ax2.set_title('Red metabolite module')
+
+# AX3: scatter plot Component 1
+plots.female_male_scatter(results_p180,
+                          ['red'],
+                          'Component 1',
+                          ax3)
+# AX4: scatter plot Component 2
+plots.female_male_scatter(results_p180,
+                          ['red'],
+                          'Component 2',
+                          ax4)
 filename = savepath +\
            'Figure3.pdf'
 plt.savefig(filename,
             dpi=300)
 
+#### FIGURE 4: NMR platform ####
+fig = plt.figure(figsize = (12,12))
+fig.suptitle('Sex differences in NMR platform', fontsize=18)
+ax1 = fig.add_subplot(221)
+ax2 = fig.add_subplot(222)
+ax3 = fig.add_subplot(223)
+ax4 = fig.add_subplot(224)
+
+# AX1: forest plot
+plots.female_male_forest(results_nmr_modules,
+                         color_pastel,
+                         ax1)
+
+# AX2: network
+ax2.imshow(nmr_network,
+           aspect='auto')
+ax2.axis('off')
+ax2.set_title('Green and turquoise metabolite modules')
+
+# AX3: scatter plot Component 1
+plots.female_male_scatter(results_nmr,
+                          ['green', 'turquoise'],
+                          'Component 1',
+                          ax3)
+
+# AX4: scatter plot Component 2
+plots.female_male_scatter(results_nmr,
+                          ['green', 'turquoise'],
+                          'Component 2',
+                          ax4)
+filename = savepath +\
+           'Figure4.pdf'
+plt.savefig(filename,
+            dpi=300)
+            
