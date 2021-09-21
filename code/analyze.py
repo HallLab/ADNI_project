@@ -335,7 +335,7 @@ class ADNI:
             dataframe of the sex difference plus the category 
         '''
         indices = [[0,2], [1,3]]
-        filter_t = 0.05
+        filter_t = 10**-5
         if self.modules:
             n_modules = len(self.metabolite_names)-1
             diff_t = 0.05/n_modules
@@ -470,19 +470,26 @@ class ADNI:
             f = indices[i][0]
             m = indices[i][1]
             dat = self.results[f][['Beta',
+                                   'SE',
                                    'pvalue']].copy()
             dat.columns = ['Beta_female',
+                           'SE_female',
                            'pvalue_female']
             dat['Beta_male'] = self.results[m]['Beta']
+            dat['SE_male']   = self.results[m]['SE']
             dat['pvalue_male'] = self.results[m]['pvalue']
 
             dat['Beta_total'] = self.results_meta[i]['Beta']
+            dat['SE_total']   = self.results_meta[i]['SE']
             dat['pvalue_total'] = self.results_meta[i]['pvalue']
 
             dat['pvalue_diff'] = self.results_diff[i]['pvalue']
             cols_to_round = ['Beta_female',
                              'Beta_male',
-                             'Beta_total']
+                             'Beta_total',
+                             'SE_female',
+                             'SE_male',
+                             'SE_total']
             cols_to_sc_round = ['pvalue_female',
                                 'pvalue_male',
                                 'pvalue_total',

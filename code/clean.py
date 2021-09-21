@@ -1056,15 +1056,15 @@ class QT_pad:
             Proportion of variance explained by components
         '''
         print('-----Running PLS-DA-----\n')
-        self.data[self.phenotypes] = self.data[self.phenotypes].\
-                                          apply(stats.zscore,
-                                                nan_policy='omit')
+        dat = self.data[self.phenotypes].\
+                   apply(stats.zscore,
+                         nan_policy='omit')
 
         encoder = OneHotEncoder(sparse=False)
         Y = pd.DataFrame(encoder.fit_transform(self.data[ [self.diagnosis] ]))
         Y.columns = encoder.get_feature_names([self.diagnosis])
         
-        X = self.data.reset_index()[self.phenotypes]
+        X = dat.reset_index()[self.phenotypes]
         x_variance = np.sum(np.var(X,
                                    axis = 0))
 
