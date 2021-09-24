@@ -956,6 +956,8 @@ class QT_pad:
             phenotype column names
         covariates: list
             covariate column names
+        extra_vars: list
+            extra variables to show in summary
         diagnosis: str
             diagnosis column name
         '''
@@ -970,6 +972,8 @@ class QT_pad:
                            'PTEDUCAT',
                            'APOE4',
                            'PTGENDER']
+        self.extra_vars = ['PTETHCAT',
+                           'PTRACCAT']
         self.diagnosis = 'DX.bl'
         qt_path = '../data/ADNI_adnimerge_20170629_QT-freeze.csv'
 
@@ -980,6 +984,7 @@ class QT_pad:
 
         keep_columns = [self.diagnosis] +\
                         self.covariates +\
+                        self.extra_vars +\
                         self.phenotypes +\
                        ['ICV', 'ORIGPROT'] 
                        
@@ -1017,8 +1022,8 @@ class QT_pad:
 
         table = pd.pivot_table(dat,
                                index=['ORIGPROT',
-                                       'PTGENDER',
-                                       'APOE4'],
+                                      'PTGENDER',
+                                      'APOE4'],
                                values=['PTEDUCAT',
                                        'AGE',
                                        'COUNT'],
@@ -1029,7 +1034,61 @@ class QT_pad:
         print(table)
         print(dat['APOE4'].value_counts())
         print(dat['PTGENDER'].value_counts())
+        print(dat['PTRACCAT'].value_counts())
     
+    def print_summary_PLS(self):
+        '''
+        After running a PLS_DA, print a summary with the covariate and 
+        phenotype information of the extremes of the PLS scores
+        '''
+        dat = self.data.copy()
+        dat.loc[:,'COUNT'] = 1
+        scores = self.scores.copy()
+
+        cols = ['Component 1',
+                'Component 2']
+        vals = [-1, 1]
+        main_print = 'Descriptive statistics for extreme '
+        for c in cols:
+            for v in vals:
+                if c == 'Component 1':
+                    threshold = v * 2
+                else:
+                    threshold = v
+                if threshold < 0:
+                    extreme_samples = scores[c] < threshold
+                    extreme_to_print = 'negative values in '
+                elif threshold > 0:
+                    extreme_samples = scores[c] > threshold
+                    extreme_to_print = 'positive values in '
+
+                table = pd.pivot_table(dat[extreme_samples],
+                                       index=['PTGENDER'],
+                                       values=['PTEDUCAT',
+                                               'AGE',
+                                               'Ventricles',
+                                               'Hippocampus',
+                                               'WholeBrain',
+                                               'Entorhinal',
+                                               'Fusiform',
+                                               'MidTemp',
+                                               'COUNT'],
+                                       aggfunc={'PTEDUCAT': [np.mean],
+                                                'AGE': [np.mean],
+                                                'Ventricles': [np.mean],
+                                                'Hippocampus': [np.mean],
+                                                'WholeBrain': [np.mean],
+                                                'Entorhinal': [np.mean],
+                                                'Fusiform': [np.mean],
+                                                'MidTemp': [np.mean],
+                                                'COUNT': np.sum}).round(3)
+                
+                print(main_print +
+                      extreme_to_print +
+                      c)
+                print(table)
+                print('')
+        
     def PLS_DA(self,
                n_components:int=2):
         '''
