@@ -549,15 +549,14 @@ plot_heatmap <- function(wgcna,
      diag(plot_diss) <- NA
      filename <- paste0("../results/plots/heatmap_",
                         suffix,
-                        ".pdf")
-     pdf(file = filename)
+                        ".eps")
+     postscript(file = filename)
      TOMplot(plot_diss,
              wgcna$tree,
              wgcna$colors,
              main = paste0("Network heatmap plot ",
                            suffix))
      dev.off()
-
 }
 
 save_wgcna <- function(wgcna,
@@ -603,7 +602,9 @@ save_wgcna <- function(wgcna,
      mm_filename <- paste0("../results/MM_",
                            suffix,
                            ".csv")
-     write.csv(wgcna$MM,
+     MM_table <- wgcna$MM
+     MM_table$colors <- wgcna$colors
+     write.csv(MM_table,
                file = mm_filename)
 }
 
