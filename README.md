@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5527184.svg)](https://doi.org/10.5281/zenodo.5527184)
+
 # ADNI sex differences analysis
 
 This is the repository for the sex differences analysis on the ADNI dataset.
