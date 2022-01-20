@@ -46,7 +46,7 @@ class Metabolites:
         pool_meta: list of pd.DataFrame
             List of metadata from the pool samples
 
-        Attributes (nmr)
+        Attributes
         ----------
         qc_tags: pd.DataFrame
             quality control tags
@@ -87,6 +87,7 @@ class Metabolites:
             self.pool = []
             self.data = []
             self.lod  = []
+            self.qc_tags = []
             self.data_meta = []
             self.pool_meta = []
             c = 0
@@ -94,9 +95,12 @@ class Metabolites:
                 dat = pd.read_csv(data_path + i,
                                   na_values=na_values).\
                          set_index('RID')
+                qc_tag = pd.read_csv(data_path + i).\
+                            set_index('RID')
                 # Carnosine is misspelled in ADNI2GO UPLC
                 if i == 'ADMCDUKEP180UPLCADNI2GO.csv':
                     dat = dat.rename(columns={'canosine':'Carnosine'})
+                    qc_tag = qc_tag.rename(columns={'canosine':'Carnosine'})
                 #Divide between pool and proper samples
                 dat_pool = dat.loc[999999]
                 dat_data = dat.loc[0:99999]
@@ -116,6 +120,7 @@ class Metabolites:
                               inplace = True)
                 self.data.append(dat_data)
                 self.pool.append(dat_pool)
+                self.qc_tags.append(qc_tag)
                 c = c + 1
 
             #### LOD VALUES ####
@@ -458,7 +463,8 @@ class Metabolites:
     def impute_metabolites(self):
         '''
         Impute NAs by using 0.5 * LOD score in the p180 platform,
-        or by 0 in the nmr platform
+        or by half min value in NMR.
+        Removes participants with non LOD tags.
 
         Returns
         ----------
@@ -501,12 +507,31 @@ class Metabolites:
                         else:
                             print('There is something weird here')
         elif self.platform == 'nmr':
+            # Removing participants with bad QC
+            rows = self.data.isna().sum(axis=1) > 0
+            impute_participants = self.data.loc[rows, :].index
+            n_cols = self.qc_tags.shape[1]
+            id_list = self.qc_tags.loc[impute_participants].\
+                           iloc[:, :n_cols-1].sum(axis=1) > 0
+            to_remove = id_list.index[id_list].unique()
+            print('We will remove ' +
+                  str(len(to_remove)) + 
+                  ' participants with bad QC tags in the nmr platform')
+            self.data = self.data.drop(to_remove)
+            
+            # Imputing metabolites with below LOD
             mets_to_impute = self.data.\
-                             columns[self.data.isna().any()]
+                                 columns[self.data.isna().any()]
+            data_points_impute = self.data.isna().sum().sum()
             print('We will impute ' +
                   str(len(mets_to_impute)) + 
-                  ' metabolites in the nmr platform')
-            self.data[self.data.isna()] = 0
+                  ' metabolites and ' +
+                  str(data_points_impute) +
+                  ' data points in the nmr platform')
+            for c in mets_to_impute:
+                half_min = self.data.loc[:,c].min() / 2
+                na_bool = self.data.loc[:,c].isna()
+                self.data.loc[na_bool, c] = half_min
         print('')
 
     def transform_metabolites_log2(self):
