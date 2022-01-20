@@ -126,8 +126,7 @@ class ADNI:
         if phenotypes_pls:
             phenos = pd.read_csv('../results/pheno_pls_components.csv').\
                         set_index('RID')
-            self.phenotype_names = ['Component 1',
-                                    'Component 2']
+            self.phenotype_names = list(phenos.columns)
         else:
             phenos = qtpad.data.loc[:,qtpad.phenotypes]
             self.phenotype_names = qtpad.phenotypes
@@ -265,7 +264,11 @@ class ADNI:
         results_meta: list of pd.Dataframe
             list of dataframes with new meta analyzed parameters
         '''
-        indices = [[0,2], [1,3]]
+        indices = []
+        half_length = len(self.results) // 2
+        for l in range(half_length):
+            ind = [l, l+half_length]
+            indices.append(ind)
         results_meta = []
         
         for i in range(len(indices)):
@@ -304,7 +307,11 @@ class ADNI:
             dataframe containing the beta, SE and pvalues from
             the two sexes, and their difference test
         '''
-        indices = [[0,2], [1,3]]
+        indices = []
+        half_length = len(self.results) // 2
+        for l in range(half_length):
+            ind = [l, l+half_length]
+            indices.append(ind)
         results_diff = []
 
         for i in range(len(indices)):
@@ -334,7 +341,11 @@ class ADNI:
         results_diff: pd.DataFrame
             dataframe of the sex difference plus the category 
         '''
-        indices = [[0,2], [1,3]]
+        indices = []
+        half_length = len(self.results) // 2
+        for l in range(half_length):
+            ind = [l, l+half_length]
+            indices.append(ind)
         filter_t = 10**-5
         if self.modules:
             n_modules = len(self.metabolite_names)-1
@@ -463,7 +474,11 @@ class ADNI:
         savepath: str
             folder path to save the file
         '''
-        indices = [[0,2], [1,3]]
+        indices = []
+        half_length = len(self.results) // 2
+        for l in range(half_length):
+            ind = [l, l+half_length]
+            indices.append(ind)
         final_dat = []
         
         for i in range(len(indices)):

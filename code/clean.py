@@ -1090,7 +1090,7 @@ class QT_pad:
                 print('')
         
     def PLS_DA(self,
-               n_components:int=2):
+               n_components:int=None):
         '''
         Run a Partial Least Squares Regression where the
         outcome is the diagnosis, and the predictors are
@@ -1099,7 +1099,8 @@ class QT_pad:
         Parameters
         ----------
         n_components: int
-            number of components to estimate
+            number of components to estimate. If None, it will
+            be the number of variables - 1.
 
         Returns
         ---------
@@ -1119,43 +1120,57 @@ class QT_pad:
                    apply(stats.zscore,
                          nan_policy='omit')
 
+        if n_components is None:
+            full_components = dat.shape[1]
+            n_components = dat.shape[1] - 1
+
         encoder = OneHotEncoder(sparse=False)
         Y = pd.DataFrame(encoder.fit_transform(self.data[ [self.diagnosis] ]))
         Y.columns = encoder.get_feature_names([self.diagnosis])
         
         X = dat.reset_index()[self.phenotypes]
-        x_variance = np.sum(np.var(X,
-                                   axis = 0))
+        #x_variance = np.sum(np.var(X,
+        #                           axis = 0))
 
-        PLSDA = PLSRegression(n_components = n_components).\
-                              fit(X=X,
-                                  Y=Y)
+        PLSDA = PLSRegression(n_components = full_components,
+                              scale=False).\
+                                  fit(X=X,
+                                      Y=Y)
+        total_variance = sum(np.var(PLSDA.x_scores_,
+                                    axis = 0))
+        
+        PLSDA = PLSRegression(n_components = n_components,
+                              scale=False).\
+                                  fit(X=X,
+                                      Y=Y)
         vips = _calculate_vips(PLSDA)
         self.vips = vips
 
         x_scores_variance = np.var(PLSDA.x_scores_,
                                    axis = 0) 
                                    
-        self.x_variance_explained = x_scores_variance / x_variance
+        self.x_variance_explained = x_scores_variance / total_variance
         
         self.scores = pd.DataFrame(PLSDA.x_scores_)
         self.scores.index = self.data.index
-        self.scores.rename(columns={0:'Component 1',
-                                    1:'Component 2'},
-                           inplace=True)
         self.x_weights = pd.DataFrame(PLSDA.x_weights_)
         self.x_weights.index = X.columns
-        self.x_weights.rename(columns={0:'Weight 1',
-                                       1:'Weight 2'},
-                              inplace=True)
         self.y_weights = pd.DataFrame(PLSDA.y_weights_)
         y_weight_columns = ['AD',
                             'CN',
                             'MCI']
         self.y_weights.index = y_weight_columns
-        self.y_weights.rename(columns={0:'Weight 1',
-                                       1:'Weight 2'},
-                              inplace=True)        
+
+        # Replace names
+        for i in range(n_components):
+            score_name = 'Component ' + str(i + 1)
+            weight_name = 'Weight ' + str(i + 1)
+            self.scores.rename(columns={i: score_name},
+                               inplace=True)
+            self.x_weights.rename(columns={i: weight_name},
+                                  inplace=True)
+            self.y_weights.rename(columns={i: weight_name},
+                                  inplace=True)
 
     def save_PLS(self,
                  savepath):
