@@ -70,6 +70,9 @@ class Metabolites:
                           'ADMCDUKEP180UPLCADNI2GO.csv',
                           'ADMCDUKEP180FIAADNI2GO.csv']
 
+            qc_excel_names = ['4610 UPLC p180 Data.xlsx',
+                              '4610 FIA p180 Data.xlsx']
+                              
             self.cohort = ['ADNI1',
                            'ADNI1',
                            'ADNI2GO',
@@ -91,19 +94,38 @@ class Metabolites:
             self.data_meta = []
             self.pool_meta = []
             c = 0
+            n = 0
             for i in file_names:
                 dat = pd.read_csv(data_path + i,
                                   na_values=na_values).\
                          set_index('RID')
-                qc_tag = pd.read_csv(data_path + i).\
-                            set_index('RID')
-                # Carnosine is misspelled in ADNI2GO UPLC
-                if i == 'ADMCDUKEP180UPLCADNI2GO.csv':
-                    dat = dat.rename(columns={'canosine':'Carnosine'})
-                    qc_tag = qc_tag.rename(columns={'canosine':'Carnosine'})
                 #Divide between pool and proper samples
                 dat_pool = dat.loc[999999]
                 dat_data = dat.loc[0:99999]
+                if 'ADNI2GO' in i:
+                    qc_dat = pd.read_excel(data_path + qc_excel_names[n],
+                                           sheet_name=0,
+                                           header=1)
+                    qc_dat = qc_dat.loc[qc_dat['Plate Bar Code'].notnull(),:]
+                    data_types_dict = {'Sample Bar Code': 'Int64'}
+                    qc_dat = qc_dat.astype(data_types_dict)
+                    qc_tag = dat_data.reset_index().\
+                                      merge(qc_dat,
+                                            how='left',
+                                            left_on=['Plate.Bar.Code',
+                                                     'Sample.Bar.Code'],
+                                            right_on=['Plate Bar Code',
+                                                      'Sample Bar Code']).\
+                                      set_index('RID')
+                    n = n + 1
+                else:
+                    qc_tag = pd.read_csv(data_path + i).\
+                                set_index('RID')
+                # Carnosine is misspelled in ADNI2GO UPLC
+                if i == 'ADMCDUKEP180UPLCADNI2GO.csv':
+                    dat_pool = dat_pool.rename(columns={'canosine':'Carnosine'})
+                    dat_data = dat_data.rename(columns={'canosine':'Carnosine'})
+                    qc_tag = qc_tag.rename(columns={'canosine':'Carnosine'})
                 #Divide between metadata and data (metabolites)
                 if self.cohort[c] == 'ADNI1':
                     col_index = list(range(0,7))       
