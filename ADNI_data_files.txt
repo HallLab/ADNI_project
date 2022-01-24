@@ -12,3 +12,6 @@
 /storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Nightingale/ADNINIGHTINGALE2_DICT.csv
 /storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Biocrates_p180/ADMCDUKEP180FIAADNI2GO_DICT.csv
 /storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Biocrates_p180/ADMCDUKEP180UPLCADNI2GO_DICT.csv
+/storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/ADMCPATIENTDRUGCLASSES_20170512.csv
+'/storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Biocrates_p180/ADMCDUKEP180SUPP_20170410/4610 FIA p180 Data.xlsx'
+'/storage/home/tug156/mah546/default/datasets/ADNI/Biospecimen/Biospecimen_Results/ADMC/Biocrates_p180/ADMCDUKEP180SUPP_20170410/4610 UPLC p180 Data.xlsx'

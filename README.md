@@ -41,17 +41,6 @@ conda activate adni_project
 pip install clarite
 ```
 
-## Download medication files from Synapse
-
-Before replicating the analysis, make sure you have an account created on [Synapse](https://www.synapse.org/).
-Create the `data` folder by running:
-
-```bash
-mkdir data
-```
-
-Manually download the medication [file](https://www.synapse.org/#!Synapse:syn12179110) in the `data` folder.
-
 ## Replicate the analysis
 
 Depending on whether you are replicating the analysis on your local machine or sending the job to a cluster, you can run either `run_local.sh` or `run_cluster.sh`
@@ -80,11 +69,12 @@ mkdir data/
 
 Copy the following files from ADNI in the `data` folder
 
-- p180 data files: `ADMCDUKEP180UPLC_01_15_16.csv`, `ADMCDUKEP180FIA_01_15_16.csv`, `ADMCDUKEP180UPLCADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO_DICT.csv`, `ADMCDUKEP180UPLCADNI2GO_DICT.csv`.
+- p180 data files: `ADMCDUKEP180UPLC_01_15_16.csv`, `ADMCDUKEP180FIA_01_15_16.csv`, `ADMCDUKEP180UPLCADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO.csv`, `ADMCDUKEP180FIAADNI2GO_DICT.csv`, `ADMCDUKEP180UPLCADNI2GO_DICT.csv`, `4610 FIA p180 Data.xlsx`, `4610 UPLC p180 Data.xlsx`.
 - nmr nightingale files: `ADNINIGHTINGALE2.csv`, `ADNINIGHTINGALE2_DICT.csv`.
 - fasting information: `BIOMARK.csv`.
 - LOD values: `P180FIALODvalues_ADNI1.csv`, `P180FIALODvalues_ADNI2GO.csv`, `P180UPLCLODvalues_ADNI1.csv`, `P180UPLCLODvalues_ADNI2GO.csv`.
 - QT-pad: `ADNI_adnimerge_20170629_QT-freeze.csv`.
+- Drug classes: `ADMCPATIENTDRUGCLASSES_20170512.csv`
 
 Next, on the terminal, type:
 
