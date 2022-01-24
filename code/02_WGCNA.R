@@ -21,22 +21,22 @@ choose_sf_power(p180,
 choose_sf_power(nmr,
                 plotname = "wgcna_power_nmr",
                 suffix = "NMR")
-# Based on the analysis we chose a power of 9 for p180,
-# and 11 for nmr
+# Based on the analysis we chose a power of 10 for p180,
+# and 10 for nmr
 
 #### 4 CHECK SCALE-FREE TOPOLOGY
 check_scale_free(p180,
-                 soft_power = 9)
+                 soft_power = 10)
 check_scale_free(nmr,
                  plotname = "scale_free_check_nmr",
-                 soft_power = 11)
+                 soft_power = 10)
 
 #### 5. NETWORK CONSTRUCTION AND MODULE DETECTION ####
 print("-----Network construction and module detection-----")
 wgcna_p180 <- compute_wgcna(p180,
-                            soft_power = 9)
+                            soft_power = 10)
 wgcna_nmr <- compute_wgcna(nmr,
-                           soft_power = 11,
+                           soft_power = 10,
                            plotname = "wgcna_dendrogram_nmr",
                            plot_modules = "wgcna_module_tree_nmr",
                            min_module_size = 10)

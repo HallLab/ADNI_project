@@ -22,6 +22,7 @@ __pycache__/
 
 #R
 *.RData
+*.Rhistory
 
 #Running output
 *.log
