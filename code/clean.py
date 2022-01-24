@@ -516,14 +516,14 @@ class Metabolites:
                 self.pool[m].drop(manually_bad_qc[l],
                                   axis=1,
                                   inplace=True)
+            total_points_imputed = 0
+            total_mets_imputed = []
             for i in range(len(self.data)):
                 mets_to_impute = self.data[i].\
                                  columns[self.data[i].isna().any()]
-                print('We will impute ' +
-                      str(len(mets_to_impute)) +
-                      ' metabolites in ' +
-                      self.cohort[i] + ' ' + 
-                      self.type[i])
+                data_points_impute = self.data[i].isna().sum().sum()
+                total_mets_imputed.extend(mets_to_impute)
+                total_points_imputed = total_points_imputed + data_points_impute
                 for j in mets_to_impute:
                     list_of_rows = self.data[i].loc[\
                                    self.data[i][j].isna()].index
@@ -549,6 +549,9 @@ class Metabolites:
                                       self.type[i])
                         else:
                             print('There is something weird here')
+            
+            self._print_imputed(len(set(total_mets_imputed)),
+                                data_points_impute)
         elif self.platform == 'nmr':
             # Removing participants with bad QC
             rows = self.data.isna().sum(axis=1) > 0
@@ -566,16 +569,42 @@ class Metabolites:
             mets_to_impute = self.data.\
                                  columns[self.data.isna().any()]
             data_points_impute = self.data.isna().sum().sum()
-            print('We will impute ' +
-                  str(len(mets_to_impute)) + 
-                  ' metabolites and ' +
-                  str(data_points_impute) +
-                  ' data points in the nmr platform')
+            self._print_imputed(len(mets_to_impute),
+                                data_points_impute)
             for c in mets_to_impute:
                 half_min = self.data.loc[:,c].min() / 2
                 na_bool = self.data.loc[:,c].isna()
                 self.data.loc[na_bool, c] = half_min
         print('')
+
+    def _print_imputed(self,
+                       mets_to_impute,
+                       data_points_impute,
+                       ind=None):
+        '''
+        Print how many metabolites and data points are going to be
+        imputed
+
+        Parameters
+        ----------
+        mets_to_impute: int
+            number of metabolites to impute
+        data_points_impute: int
+            number of data points to impute
+        ind: int
+            index of correct data set if p180 platform
+        '''
+        if self.platform == 'nmr':
+            final = 'nmr platform'
+        elif self.platform == 'p180':
+            final = 'p180 platform'
+
+        print('We will impute ' +
+              str(mets_to_impute) + 
+              ' metabolites and ' +
+              str(data_points_impute) +
+              ' data points in the ' +
+              final)
 
     def transform_metabolites_log2(self):
         '''
