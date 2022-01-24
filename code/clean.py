@@ -106,16 +106,25 @@ class Metabolites:
                     qc_dat = pd.read_excel(data_path + qc_excel_names[n],
                                            sheet_name=0,
                                            header=1)
-                    qc_dat = qc_dat.loc[qc_dat['Plate Bar Code'].notnull(),:]
-                    data_types_dict = {'Sample Bar Code': 'Int64'}
+                    # Replace -, :, (, ), and spaces with .
+                    old_columns = qc_dat.columns
+                    new_columns = old_columns.str.replace(pat='-|:|\(|\)| ',
+                                                          repl='.')
+                    qc_dat.columns = new_columns
+                    qc_dat = qc_dat.loc[qc_dat['Plate.Bar.Code'].notnull(),:]
+                    data_types_dict = {'Sample.Bar.Code': 'Int64'}
+                    retain_cols = ['Plate.Bar.Code',
+                                   'Sample.Bar.Code',
+                                   'RID']
+                    compare_cols = ['Plate.Bar.Code',
+                                    'Sample.Bar.Code']
                     qc_dat = qc_dat.astype(data_types_dict)
                     qc_tag = dat_data.reset_index().\
+                                      loc[:, retain_cols].\
                                       merge(qc_dat,
                                             how='left',
-                                            left_on=['Plate.Bar.Code',
-                                                     'Sample.Bar.Code'],
-                                            right_on=['Plate Bar Code',
-                                                      'Sample Bar Code']).\
+                                            left_on=compare_cols,
+                                            right_on=compare_cols).\
                                       set_index('RID')
                     n = n + 1
                 else:
@@ -495,6 +504,18 @@ class Metabolites:
         '''
         print('-----Imputing metabolites-----')
         if self.platform == 'p180':
+            # 'C5.DC..C6.OH.' and 'Taurine' have bad QC flags
+            # Manually removing them
+            manually_bad_qc = ['Taurine',
+                               'C5.DC..C6.OH.']
+            indices = [0, 3]
+            for l, m in enumerate(indices):
+                self.data[m].drop(manually_bad_qc[l],
+                                  axis=1,
+                                  inplace=True)
+                self.pool[m].drop(manually_bad_qc[l],
+                                  axis=1,
+                                  inplace=True)
             for i in range(len(self.data)):
                 mets_to_impute = self.data[i].\
                                  columns[self.data[i].isna().any()]
