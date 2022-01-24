@@ -29,6 +29,7 @@ nmr.remove_non_fasters()
 
 #### Data transformation
 p180.impute_metabolites()
+p180.harmonize_metabolites()
 nmr.impute_metabolites()
 p180.transform_metabolites_log2()
 nmr.transform_metabolites_log2()
