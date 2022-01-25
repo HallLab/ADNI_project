@@ -289,8 +289,8 @@ class ADNI:
             pval = 2 * stats.norm.cdf(-abs(zeta))
 
             final_dat = pd.DataFrame(meta_se, 
-                                    index=res_temp1.index, 
-                                    columns=['SE'])
+                                     index=res_temp1.index, 
+                                     columns=['SE'])
             final_dat['Beta']   = meta_beta
             final_dat['pvalue'] = pval
             results_meta.append(final_dat)
@@ -349,10 +349,10 @@ class ADNI:
         filter_t = 10**-5
         if self.modules:
             n_modules = len(self.metabolite_names)-1
-            diff_t = 0.05/n_modules
+            diff_t = 0.05/(n_modules * 5)
         else:
             m = _estimate_effective_tests(self.data[self.metabolite_names])
-            diff_t = 0.05/m
+            diff_t = 0.05/(m * 5)
             print('There are ' + 
                   str(m) + 
                   ' independent tests')
@@ -432,36 +432,47 @@ class ADNI:
         '''
         if self.modules:
             n_modules = len(self.metabolite_names)-1
-            b_alpha = 0.05/n_modules
+            b_alpha = 0.05/(n_modules * 5)
         else:
-            if 'p180' in self.filename:
-                b_alpha   = 0.05/50
-            elif 'nmr' in self.filename:
-                b_alpha   = 0.05/44
+            m = _estimate_effective_tests(self.data[self.metabolite_names])
+            b_alpha = 0.05/(m * 5)
 
-        for i in range(len(self.results_diff)):
-            f = i + 2 # index for male sex specific result
-            filter_1 = self.results_meta[i]['pvalue'] < b_alpha
+        print('For the Arnold et al 2020 ' + 
+              'categorization the Bonferroni alpha is ' +
+              str(b_alpha))
 
-            bool_1 = self.results[i]['pvalue'] < b_alpha
-            bool_2 = self.results[f]['pvalue'] < b_alpha
+        indices = []
+        half_length = len(self.results) // 2
+        for l in range(half_length):
+            ind = [l, l+half_length]
+            indices.append(ind)
+
+        for i in indices:
+            f_i = i[0]
+            s_i = i[1]
+            filter_1 = self.results_meta[f_i]['pvalue'] < b_alpha
+
+            bool_1 = self.results[f_i]['pvalue'] < b_alpha
+            bool_2 = self.results[s_i]['pvalue'] < b_alpha
             filter_2 = bool_1 | bool_2
 
-            bool_3 = self.results[i]['pvalue'] < 0.05
-            bool_4 = self.results[f]['pvalue'] < 0.05
-            bool_5 = self.results_diff[i]['pvalue'] < 0.05
+            bool_3 = self.results[f_i]['pvalue'] < 0.05
+            bool_4 = self.results[s_i]['pvalue'] < 0.05
+            bool_5 = self.results_diff[f_i]['pvalue'] < 0.05
             filter_3 = (bool_3 | bool_4) & bool_5
 
+            bool_6 = self.results_diff[f_i]['pvalue'] > 0.05
             final_filter = filter_1 | filter_2 | filter_3
 
-            self.results_diff[i]['difference_arnold'] = 'None'
-            self.results_diff[i].loc[final_filter,
+            self.results_diff[f_i]['difference_arnold'] = 'None'
+            bool_homogeneous = final_filter & bool_6
+            self.results_diff[f_i].loc[bool_homogeneous,
                                      'difference_arnold'] = 'Homogeneous'
             bool_heterogeneous = final_filter & bool_5
-            self.results_diff[i].loc[bool_heterogeneous,
+            self.results_diff[f_i].loc[bool_heterogeneous,
                                      'difference_arnold'] = 'Heterogeneous'
             bool_sex_specific = filter_2 & bool_5
-            self.results_diff[i].loc[bool_sex_specific,
+            self.results_diff[f_i].loc[bool_sex_specific,
                                      'difference_arnold'] = 'Sex-specific'
     
     def save_to_csv(self,
