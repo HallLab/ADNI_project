@@ -14,11 +14,11 @@ modules   = [False,
              True]
 
 savepath = '../results'
-for i in range(0,4):
+for i in range(4):
     if modules[i]:
-        end_line = 'with metabolite modules'
+        end_line = 'with metabolite modules-----'
     else:
-        end_line = 'with single metabolites'
+        end_line = 'with single metabolites-----'
     print('-----Analyzing ' + 
           platforms[i] + 
           ' platform ' +

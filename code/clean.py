@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 import pingouin as pg
+import scipy.stats as stats
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 
 from warnings import simplefilter
 from sklearn import linear_model
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.cross_decomposition import PLSRegression
-
-import scipy.stats as stats
 
 class Metabolites:
     '''
@@ -1185,7 +1185,24 @@ class QT_pad:
                       c)
                 print(table)
                 print('')
-        
+
+    def plot_summary(self):
+        '''
+        Plot the distribution of the phenotype list
+        '''
+        savepath = '../results/plots/'
+        filename = 'pheno_boxplots.pdf'
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111)
+        dat = self.data[self.phenotypes]
+        dat['Ventricles'] = np.log(dat['Ventricles'])
+        dat = dat.apply(stats.zscore,
+                        nan_policy='omit')
+        ax.violinplot(dat,
+                      showmeans=True)
+        plt.savefig(savepath + filename,
+                    dpi=300)
+            
     def PLS_DA(self,
                n_components:int=None):
         '''
@@ -1213,9 +1230,10 @@ class QT_pad:
             Proportion of variance explained by components
         '''
         print('-----Running PLS-DA-----\n')
-        dat = self.data[self.phenotypes].\
-                   apply(stats.zscore,
-                         nan_policy='omit')
+        dat = self.data[self.phenotypes]
+        dat.loc[:,'Ventricles'] = np.log(dat.loc[:,'Ventricles'])
+        dat = dat.apply(stats.zscore,
+                        nan_policy='omit')
 
         if n_components is None:
             full_components = dat.shape[1]
@@ -1268,6 +1286,37 @@ class QT_pad:
                                   inplace=True)
             self.y_weights.rename(columns={i: weight_name},
                                   inplace=True)
+    
+    def remove_multivariate_outliers(self):
+        '''
+        Remove multivariate outliers by computing the mahalanobis distance
+        between participants with the PLS-DA scores
+
+        Returns
+        ----------
+        data: pd.Dataframe
+            data with multivariate outliers removed
+        '''
+        print('-----Removing multivariate outliers-----')
+        data = self.scores
+        cov_mat = data.cov()
+        p2      = data.mean()
+        cov_mat_pm1 = np.linalg.matrix_power(cov_mat, -1)
+        distances = []
+        for l, val in enumerate(data.to_numpy()):
+            p1 = val
+            distance = (p1-p2).T.dot(cov_mat_pm1).dot(p1-p2)
+            distances.append(distance)
+        distances = np.array(distances)
+        cutoff    = stats.chi2.ppf(0.999, data.shape[1]-1)
+        n_to_remove = (distances > cutoff ).sum()
+        participant_list = list(data.\
+                                index[(distances > cutoff)])
+        print('We will remove ' + 
+              str(n_to_remove) + 
+              ' participants from the QTPAD data')
+        self.data = self.data.drop(participant_list)
+        self.scores = self.scores.drop(participant_list)
 
     def save_PLS(self,
                  savepath):

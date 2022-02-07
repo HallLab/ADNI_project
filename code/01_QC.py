@@ -47,6 +47,7 @@ nmr.residuals_from_meds(meds)
 
 #### Phenotype PLS
 qtpad.PLS_DA()
+qtpad.remove_multivariate_outliers()
 qtpad.save_PLS('../results/')
 
 #### Save files

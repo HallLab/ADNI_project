@@ -16,6 +16,7 @@ file_extensions = ['.pdf',
 
 qtpad = clean.QT_pad()
 qtpad.PLS_DA()
+qtpad.remove_multivariate_outliers()
 color_pastel = cm.get_cmap('Set2')
 results_p180_modules = pd.read_csv(respath + 'results_p180_modules.csv').\
                           set_index(['Variable',
@@ -269,7 +270,7 @@ for ext in file_extensions:
     plt.savefig(filename,
                 dpi=300)
             
-#### SUPP FIG 1 ####
+#### SUPP FIG 2 ####
 # PLS-DA scatter plots #
 
 def score_plot(ax,
@@ -406,7 +407,7 @@ weight_plot(ax4,
 
 for ext in file_extensions:
     filename = savepath +\
-               'FigureS1' +\
+               'FigureS2' +\
                ext
     plt.savefig(filename,
                 dpi=300)
