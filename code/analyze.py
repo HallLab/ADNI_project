@@ -324,7 +324,7 @@ class ADNI:
                          np.power(res_temp2['SE'], 2))
         
             zdiff = t1 / t2
-            pval  = 2*stats.norm.cdf(-abs(zdiff))
+            pval  = 2*stats.norm.sf(abs(zdiff))
             final_dat = pd.DataFrame(zdiff)
             final_dat.columns = pd.Index(['Z'])
             final_dat['pvalue'] = pval
