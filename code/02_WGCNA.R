@@ -54,10 +54,13 @@ save_wgcna(wgcna_nmr,
            suffix = "nmr")
 
 export_to_cytoscape(wgcna_p180,
-                    "red",
+                    list("brown", "blue", "yellow"),
+                    colnames(p180)[-1])
+export_to_cytoscape(wgcna_p180,
+                    "All",
                     colnames(p180)[-1])
 export_to_cytoscape(wgcna_nmr,
-                    list("green", "turquoise"),
+                    list("brown", "turquoise"),
                     colnames(nmr)[-1])
 
 #### 8. PRINT SESSION ####

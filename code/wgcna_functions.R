@@ -616,7 +616,8 @@ export_to_cytoscape <- function(wgcna,
      # Parameters
      # ----------
      # wgcna: wgcna result from compute_wgcna
-     # module: name or list of names of module(s) to export
+     # module: name or list of names of module(s) to export. "All" will output
+     #    all modules
      # metabolite_names: name of metabolites in the same order
      #    as in the wgcna dataset
      #
@@ -629,6 +630,9 @@ export_to_cytoscape <- function(wgcna,
           }
           module_name <- paste0(module,
                                 collapse="-")
+     } else if (module == "All") {
+          in_module <- rep(TRUE, length(wgcna[[3]]))
+          module_name <- module
      } else {
           in_module <- wgcna[[3]] == module
           module_name <- module
