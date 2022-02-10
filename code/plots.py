@@ -51,6 +51,13 @@ def female_male_scatter(results,
     sphyn = meta_names.str.match(pat = 'SM.') & sex_different
     amino = meta_names.str.match(pat = '[A-Z][a-z]{2}$') & sex_different
     amines = ~(amino + PCs + lysoPCs + acyl + sphyn) & sex_different
+
+    group_names = ['PCs',
+                   'lysoPC',
+                   'SMs',
+                   'Acylcarnitines',
+                   'Amino acids',
+                   'Biogenic amines']
     
     modules_to_highlight = []
     mod_colors = []
@@ -78,17 +85,12 @@ def female_male_scatter(results,
         c = color_pastel.reversed()(i)
         colors.append(c)
 
-    #colors = ['gray'] +\
-    #         ['purple'] +\
-    #         mod_colors
-
     colors = colors + mod_colors
 
     max_value = max(abs(dat.loc[:,['Beta_female',
                                    'Beta_male'] ]).max())
     beta_female = dat['Beta_female']
     beta_male   = dat['Beta_male']
-    var = dat.index.get_level_values('Variable')
     pvalue_diff = -np.log(dat['pvalue_diff'])*20
     max_value_round = round(max_value + 0.1, 2)
     min_max   = (-max_value_round,
@@ -99,50 +101,7 @@ def female_male_scatter(results,
         if i == 0:
             al = 0.2
         else:
-
-            al = 0.5
-            #textsI = []
-            #textsII = []
-            #textsIII = []
-            #textsIV = []
-            #for row in range(len(dat[log])):
-            #    if beta_male[log][row] > 0 and beta_female[log][row] < 0:
-            #        t = ax.text(beta_female[log][row],
-            #                    beta_male[log][row],
-            #                    var[log][row],
-            #                    size=8)
-            #        textsI.append(t)
-            #        #offset = (-50,50)
-            #    elif beta_male[log][row] > 0 and beta_female[log][row] > 0:
-            #        t = ax.text(beta_female[log][row],
-            #                    beta_male[log][row],
-            #                    var[log][row],
-            #                    size=8)
-            #        textsII.append(t)
-            #        #offset = (30,50)
-            #    elif beta_male[log][row] < 0 and beta_female[log][row] < 0:
-            #        t = ax.text(beta_female[log][row],
-            #                    beta_male[log][row],
-            #                    var[log][row],
-            #                    size=8)
-            #        textsIII.append(t)
-            #        #offset = (-30,-50)
-            #    else:
-            #        t = ax.text(beta_female[log][row],
-            #                    beta_male[log][row],
-            #                    var[log][row],
-            #                    size=8)
-            #        textsIV.append(t)
-            #        #offset = (30,-50)
-            #    #ax.annotate(var[log][row],
-            #    #            (beta_female[log][row],
-            #    #             beta_male[log][row]),
-                #            xytext=offset,
-                #            textcoords='offset points')
-            #adjust_text(textsI, va='top', ha='left')
-            #adjust_text(textsII, va='top', ha='right')
-            #adjust_text(textsIII, va='bottom', ha='left')
-            #adjust_text(textsIV, va='bottom', ha='right')
+            al = 0.8
         ax.scatter(beta_female[log],
                    beta_male[log],
                    s=pvalue_diff[log],
@@ -155,6 +114,10 @@ def female_male_scatter(results,
     ax.set_ylim(min_max)
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
+    ax.legend(group_names)
+    leg = ax.get_legend()
+    for i in range(len(group_names)):
+        leg.legendHandles[i].set_color(colors[i+1])
 
 def female_male_forest(results,
                        colors,

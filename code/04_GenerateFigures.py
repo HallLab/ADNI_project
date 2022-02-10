@@ -116,44 +116,41 @@ for ext in file_extensions:
     plt.savefig(filename,
                 dpi=300)
 
+
 #### FIGURE 3: P180 platform ####
-# SET FIGURE
+## Set Figure
 fig = plt.figure(figsize = (12,12))
 fig.suptitle('Sex differences in metabolite modules\n(P180 platform)',
              fontsize=18)
-gs = gridspec.GridSpec(2, 2)
+gs = gridspec.GridSpec(2, 2, wspace=space)
 axs = []
 axs.append(fig.add_subplot(gs[0:,0]))
 for row in range(2):
     axs.append(fig.add_subplot(gs[row,1]))
 
-# AX1: forest plot
+## Forest Plot ##
 plots.female_male_forest(results_p180_modules,
                          color_pastel,
                          axs[0])
 
-# AX2: network
+## Network image ##
 axs[1].imshow(p180_network)
 axs[1].axis('off')
 axs[1].set_title('Blue, brown, and yellow\nmetabolite modules')
 
-# AX3: scatter plot Component 1
+## Scatter Plot Single Metabolites ##
 plots.female_male_scatter(results_p180,
                           axs[2],
                           'All')
 
-axes = [ax1,
-        ax2,
-        ax3,
-        ax4]
-for i, label in enumerate(('A', 'B', 'C', 'D')):
-    axes[i].text(-0.05, 1.1, 
-                 label,
-                 transform=axes[i].transAxes,
-                 fontsize=16,
-                 fontweight='bold',
-                 va='top',
-                 ha='right')
+for i, label in enumerate(('A', 'B', 'C')):
+    axs[i].text(-0.05, 1.1, 
+                label,
+                transform=axs[i].transAxes,
+                fontsize=16,
+                fontweight='bold',
+                va='top',
+                ha='right')
 
 for ext in file_extensions:
     filename = savepath +\
@@ -161,6 +158,7 @@ for ext in file_extensions:
                ext
     plt.savefig(filename,
                 dpi=300)
+
 
 #### FIGURE 4: NMR platform ####
 fig = plt.figure(figsize = (12,12))
