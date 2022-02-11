@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5527184.svg)](https://doi.org/10.5281/zenodo.5527184)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6049171.svg)](https://doi.org/10.5281/zenodo.6049171)
 
 # ADNI sex differences analysis
 
