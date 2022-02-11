@@ -26,7 +26,7 @@ def female_male_scatter(results,
     modules: list of str, str, or None
         module colors to highlight
     '''
-    color_pastel = cm.get_cmap('Set2')
+    color_set1 = cm.get_cmap('Set1')
     axis_names = ['Effect in females',
                   'Effect in males']
     if component == 'All':
@@ -46,19 +46,30 @@ def female_male_scatter(results,
     # Divide sex_different by group of metabolites
     meta_names = dat.index.get_level_values('Variable')
 
-    PCs = meta_names.str.match(pat = 'PC.a[ae]') & sex_different
-    lysoPCs = meta_names.str.match(pat = 'lysoPC') & sex_different
-    acyl = meta_names.str.match(pat = 'C[0-9]') & sex_different
-    sphyn = meta_names.str.match(pat = 'SM.') & sex_different
-    amino = meta_names.str.match(pat = '[A-Z][a-z]{2}$') & sex_different
-    amines = ~(amino + PCs + lysoPCs + acyl + sphyn) & sex_different
+    if 'Class' in results:
+        group_names = list(dat['Class'].unique())
+        group_bools = []
+        for n in group_names:
+            p = (dat['Class'] == n) & sex_different
+            if p.sum() == 0:
+                group_names.remove(n)
+            else:
+                group_bools.append(p)
+    else:
+        PCs = meta_names.str.match(pat = 'PC.a[ae]') & sex_different
+        lysoPCs = meta_names.str.match(pat = 'lysoPC') & sex_different
+        acyl = meta_names.str.match(pat = 'C[0-9]') & sex_different
+        sphyn = meta_names.str.match(pat = 'SM.') & sex_different
+        amino = meta_names.str.match(pat = '[A-Z][a-z]{2}$') & sex_different
+        amines = ~(amino + PCs + lysoPCs + acyl + sphyn) & sex_different
 
-    group_names = ['PCs',
-                   'lysoPC',
-                   'SMs',
-                   'Acylcarnitines',
-                   'Amino acids',
-                   'Biogenic amines']
+        group_bools = [PCs, lysoPCs, sphyn, acyl, amino, amines]    
+        group_names = ['PCs',
+                       'lysoPC',
+                       'SMs',
+                       'Acylcarnitines',
+                       'Amino acids',
+                       'Biogenic amines']
     
     modules_to_highlight = []
     mod_colors = []
@@ -72,21 +83,9 @@ def female_male_scatter(results,
             modules_to_highlight.append(temp_mod)
         mod_colors = modules        
     
-    groups = [everything_else,
-              PCs,
-              lysoPCs,
-              sphyn,
-              acyl,
-              amino,
-              amines]
+    groups = [everything_else]
+    groups.extend(group_bools)
     groups.extend(modules_to_highlight)
-
-    colors = []
-    for i in range(len(groups)):
-        c = color_pastel.reversed()(i)
-        colors.append(c)
-
-    colors = colors + mod_colors
 
     max_value = max(abs(dat.loc[:,['Beta_female',
                                    'Beta_male'] ]).max())
@@ -102,19 +101,21 @@ def female_male_scatter(results,
         log = list(log)
         if i == 0:
             al = 0.2
+            color = 'silver'
         else:
-            al = 0.8
+            al = 0.7
+            color = color_set1(i-1)
             p = mlines.Line2D([], [], 
-                              color=colors[i],
+                              color=color,
                               marker='o',
                               label=group_names[i-1],
-                              ms=10,
+                              ms=8,
                               ls='')
             patches.append(p)
         ax.scatter(beta_female[log],
                    beta_male[log],
                    s=pvalue_diff[log],
-                   color=colors[i],
+                   color=color,
                    alpha=al)
     ax.set_xlabel(axis_names[0], fontsize = 12)
     ax.set_ylabel(axis_names[1], fontsize = 12)
@@ -123,7 +124,10 @@ def female_male_scatter(results,
     ax.set_ylim(min_max)
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
-    ax.legend(handles=patches)
+    ax.legend(handles=patches,
+              ncol=2,
+              frameon=False,
+              prop={'size': 8})
 
 def female_male_forest(results,
                        colors,
