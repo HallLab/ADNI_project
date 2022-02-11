@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 
 from matplotlib import cm
 
@@ -96,12 +97,20 @@ def female_male_scatter(results,
     min_max   = (-max_value_round,
                   max_value_round)
 
+    patches = []
     for i, log in enumerate(groups):
         log = list(log)
         if i == 0:
             al = 0.2
         else:
             al = 0.8
+            p = mlines.Line2D([], [], 
+                              color=colors[i],
+                              marker='o',
+                              label=group_names[i-1],
+                              ms=10,
+                              ls='')
+            patches.append(p)
         ax.scatter(beta_female[log],
                    beta_male[log],
                    s=pvalue_diff[log],
@@ -114,10 +123,7 @@ def female_male_scatter(results,
     ax.set_ylim(min_max)
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
-    ax.legend(group_names)
-    leg = ax.get_legend()
-    for i in range(len(group_names)):
-        leg.legendHandles[i].set_color(colors[i+1])
+    ax.legend(handles=patches)
 
 def female_male_forest(results,
                        colors,
@@ -162,6 +168,7 @@ def female_male_forest(results,
                     rotation=90)
         pos = pos + step
 
+    patches = []
     for sex in sexes:
         if sex == 'female':
             sep = 0
@@ -183,29 +190,15 @@ def female_male_forest(results,
                      round(interval[1][y_row],3)],
                     [c,c],
                      color=color)
-    ax.legend(sexes)
-    leg = ax.get_legend()
-    leg.legendHandles[0].set_color(colors(0))
-    leg.legendHandles[1].set_color(colors(1))
-
-def female_male_volcano(results,
-                        ax):
-    '''
-    Volcano plot with differences in betas between males and females
-    and pvalue diff
-
-    Parameters
-    ----------
-    results: pd.DataFrame
-        single metabolite results
-    ax: plt.axes
-        ax to use for matplotlib
-    '''
-    diff = results['Beta_female'] - results['Beta_male']
-    pval = -np.log10(results['pvalue_diff'])
-    
-    ax.scatter(diff,
-               pval)
+        p = mlines.Line2D([], [], 
+                          color=color,
+                          marker='o',
+                          label=sex,
+                          ms=10,
+                          ls='-')
+        patches.append(p)
+        
+    ax.legend(handles=patches)
 
 def score_plot(ax,
                qtpad,
