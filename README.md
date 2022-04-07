@@ -2,7 +2,10 @@
 
 # ADNI sex differences analysis
 
-This is the repository for the sex differences analysis on the ADNI dataset.
+This is the repository of the *[Sex Differences in the Metabolome of Alzheimer's Disease Progression](https://www.frontiersin.org/articles/10.3389/fradi.2022.782864/full)* article.
+
+Authors: Tomás González Zarzar, Brian Lee, Rory Coughlin, Dokyoon Kim, Li Shen and Molly A. Hall.
+
 The purpose is to detect sex differences in metabolite-phenotype associations.
 
 ## Clone repository
